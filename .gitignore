@@ -1,0 +1,248 @@
+# =========================================================
+# .gitignore
+# Projeto de Visão por Computador em C/C++ com OpenCV
+# =========================================================
+#
+# Objetivo:
+# Impedir que sejam enviados para o repositório ficheiros
+# desnecessários, locais ou gerados automaticamente.
+#
+# Este ficheiro foi pensado para um projeto académico com:
+# - C / C++
+# - OpenCV
+# - compilação local
+# - processamento de imagens e vídeo
+# - geração de resultados intermédios e finais
+#
+# Política adotada:
+# - versionar código-fonte, headers, documentação e dados de entrada
+# - ignorar binários, artefactos de build, outputs gerados,
+#   ficheiros temporários, caches e ficheiros específicos do ambiente
+#
+# Estrutura relevante do projeto:
+# /data/raw        -> dados originais (versionados)
+# /data/samples    -> amostras de teste (versionadas)
+# /results/frames  -> frames gerados (ignorados)
+# /results/videos  -> vídeos gerados (ignorados)
+#
+# =========================================================
+# 1) Executáveis e binários gerados pela compilação
+# =========================================================
+
+*.exe
+*.out
+*.app
+*.elf
+*.bin
+
+# =========================================================
+# 2) Artefactos de compilação C/C++
+# =========================================================
+
+*.o
+*.obj
+*.a
+*.lib
+*.lo
+*.la
+
+# Bibliotecas partilhadas / dinâmicas
+*.so
+*.so.*
+*.dll
+*.dylib
+
+# Símbolos e ficheiros de debug
+*.pdb
+*.idb
+*.ilk
+*.dSYM/
+
+# =========================================================
+# 3) Sistemas de build
+# =========================================================
+#
+# Ignora diretórios e ficheiros gerados por ferramentas de build.
+# Inclui CMake, Make e builds auxiliares locais.
+#
+
+# CMake
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+
+# Make / Autotools / Libtool
+Makefile
+aclocal.m4
+autom4te.cache/
+libtool
+m4/
+
+# Ninja
+.ninja_deps
+.ninja_log
+
+# =========================================================
+# 4) Resultados gerados pelo pipeline de visão por computador
+# =========================================================
+#
+# Estes diretórios contêm outputs gerados localmente:
+# - imagens processadas
+# - máscaras
+# - frames intermédios
+# - vídeos anotados
+#
+# Não devem ser versionados porque são artefactos derivados e
+# podem variar entre execuções, testes, tuning e debugging.
+#
+
+results/
+
+# Caso no futuro existam outras pastas de output:
+output/
+generated/
+debug_output/
+tmp/
+temp/
+
+# =========================================================
+# 5) Logs, caches e ficheiros temporários
+# =========================================================
+
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Backups e ficheiros temporários genéricos
+*~
+*.bak
+*.old
+*.orig
+*.rej
+
+# =========================================================
+# 6) Ficheiros temporários de editores
+# =========================================================
+
+*.swp
+*.swo
+*.kate-swp
+
+# =========================================================
+# 7) IDEs e editores
+# =========================================================
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.sln.docstates
+*.user
+
+# CLion / IntelliJ
+.idea/
+
+# Code::Blocks
+*.cbp
+*.layout
+*.depend
+
+# Dev-C++
+*.dev
+
+# =========================================================
+# 8) Ficheiros específicos do sistema operativo
+# =========================================================
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Linux / ambientes gráficos
+.directory
+
+# =========================================================
+# 9) OpenCV - builds locais e ficheiros auxiliares
+# =========================================================
+#
+# O OpenCV pode ser usado como dependência externa, mas builds
+# locais e artefactos compilados não devem ir para o repositório.
+#
+
+opencv/build/
+opencv_build/
+third_party/opencv/build/
+*.opencv_temp
+
+# =========================================================
+# 10) Python auxiliar (opcional)
+# =========================================================
+#
+# Mesmo que o projeto principal seja em C/C++, esta secção é útil
+# caso sejam usados scripts Python para testes, preparação de dados,
+# avaliação ou visualização de resultados.
+#
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# =========================================================
+# 11) Modelos e ficheiros pesados de ML/DL (opcional)
+# =========================================================
+#
+# Mantido por precaução caso o projeto venha a integrar modelos
+# treinados ou ficheiros de inferência.
+#
+
+*.onnx
+*.pt
+*.pth
+*.pb
+*.tflite
+*.engine
+
+# =========================================================
+# 12) Dados de entrada - manter versionados
+# =========================================================
+#
+# Importante:
+# NÃO ignoramos extensões de imagem ou vídeo globalmente
+# (.pgm, .ppm, .png, .jpg, .mp4, etc.), porque esses ficheiros
+# podem fazer parte dos dados de entrada, das amostras de teste
+# ou do material necessário à demonstração.
+#
+# A política correta neste projeto é:
+# - versionar /data/raw e /data/samples
+# - ignorar /results
+#
+# Por esse motivo, não existem regras do tipo:
+#   *.pgm
+#   *.ppm
+#   *.png
+#   *.jpg
+#   *.mp4
+#
+# Isso é intencional.
+#
+
+# =========================================================
+# Fim do ficheiro
+# =========================================================
