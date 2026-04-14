@@ -18,36 +18,40 @@ Desenvolver um pipeline de processamento de imagem/vídeo capaz de:
 * Extrair características relevantes
 * Realizar análise e/ou classificação dos objetos
 
-O sistema será desenvolvido recorrendo a **C/C++**, podendo integrar bibliotecas como OpenCV.
+O sistema será desenvolvido recorrendo a **C/C++**, podendo integrar funcionalidades limitadas da biblioteca OpenCV, conforme definido no enunciado.
 
 ---
 
 ## 🧱 Estrutura do Repositório
 
-A organização do projeto segue uma abordagem modular, separando código, dados e documentação:
+A organização do projeto segue uma abordagem modular, separando código, dados, documentação e ferramentas:
 
 ```text
 .
 ├── data/
-│   ├── raw/          # Dados originais (ex: vídeo de entrada)
-│   └── samples/      # Amostras para testes
+│   ├── raw/              # Dados originais (ex: vídeo de entrada)
+│   └── samples/          # Amostras para testes
 │
 ├── docs/
-│   ├── enunciado/    # Documentação oficial do trabalho
-│   └── notas/        # Notas e decisões técnicas
+│   ├── enunciado/        # Documentação oficial do trabalho
+│   └── notas/            # Notas e decisões técnicas
 │
-├── examples/         # Código de exemplo/apoio
+├── examples/             # Código de exemplo/apoio
 │
-├── include/          # Ficheiros de cabeçalho (.h)
+├── include/              # Ficheiros de cabeçalho (.h)
 │
-├── src/              # Implementação (.c / .cpp)
+├── src/                  # Implementação (.c / .cpp)
 │
 ├── results/
-│   ├── frames/       # Frames gerados (output)
-│   └── videos/       # Vídeos processados (output)
+│   ├── frames/           # Frames gerados (output)
+│   └── videos/           # Vídeos processados (output)
 │
-├── .github/          # Templates e configuração do GitHub
-├── .vscode/          # Configuração local do editor
+├── tools/                # Ferramentas externas de apoio
+│   └── filtergear/
+│       └── FilterGear.exe
+│
+├── .github/              # Templates e configuração do GitHub
+├── .vscode/              # Configuração local do editor
 │
 ├── .gitignore
 └── README.md
@@ -65,6 +69,37 @@ O código está dividido em módulos funcionais:
 * `tp_tracking` → Acompanhamento temporal
 * `tp_utils` → Funções auxiliares
 * `vc` → Biblioteca base de processamento de imagem
+
+Esta estrutura permite uma abordagem modular e escalável, alinhada com sistemas reais de visão por computador.
+
+---
+
+## 🔍 Visualização e Debug
+
+Para validação das diferentes etapas do pipeline (segmentação, morfologia, blobs), é utilizada a ferramenta externa **FilterGear**.
+
+### 📌 Localização
+
+```text
+tools/filtergear/FilterGear.exe
+```
+
+### ▶️ Exemplo de utilização
+
+```c
+system("cmd /c start tools\\filtergear\\FilterGear.exe results\\frames\\output.pgm");
+```
+
+### 🎯 Objetivo
+
+O FilterGear permite:
+
+* Visualizar imagens intermédias (PGM/PPM)
+* Validar resultados de segmentação
+* Analisar efeitos de operações morfológicas
+* Confirmar a integridade dos blobs
+
+A sua utilização é essencial para debugging em pipelines de processamento de imagem, onde a validação visual é crítica.
 
 ---
 
@@ -105,7 +140,19 @@ Este README corresponde à versão inicial do projeto e será expandido ao longo
 
 | Nome          | Número | Função no Projeto      |
 | ------------- | ------ | ---------------------- |
-| Ricardo Pinto | XXXXX  | XXXXXXXXXXXXXXXXXXXXXX |
-| Nuno Oliveira | XXXXX  | XXXXXXXXXXXXXXXXXXXXXX |
-| José Ferreira | XXXXX  | XXXXXXXXXXXXXXXXXXXXXX |
-| Raul Ribeiro  | XXXXX  | XXXXXXXXXXXXXXXXXXXXXX |
+| Ricardo Pinto | 14865  | XXXXXXXXXXXXXXXXXXXXXX |
+| Raul Ribeiro  | 22552  | XXXXXXXXXXXXXXXXXXXXXX |
+| Nuno Oliveira | 31550  | XXXXXXXXXXXXXXXXXXXXXX |
+| José Ferreira | 31556  | XXXXXXXXXXXXXXXXXXXXXX |
+
+---
+
+## 📚 Referências
+
+Gonzalez, R. C., & Woods, R. E. (2002). *Digital Image Processing*. Prentice Hall.
+
+Ribeiro, N. (2025). *Apontamentos da Unidade Curricular de Visão por Computador*.
+
+Kernighan, B., & Ritchie, D. (1988). *The C Programming Language*. Prentice Hall.
+
+---
