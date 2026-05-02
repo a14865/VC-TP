@@ -182,6 +182,7 @@ Desktop.ini
 #
 
 opencv/build/
+opencv/sources/
 opencv_build/
 third_party/opencv/build/
 *.opencv_temp
