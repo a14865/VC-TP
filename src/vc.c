@@ -59,7 +59,7 @@ deve preferencialmente estar aqui e não num módulo específico do TP.
 #include <ctype.h>
 #include <string.h>
 #include <malloc.h>
-#include "vc.h"
+#include "../include/vc.h"
 #include <math.h>
 #ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))

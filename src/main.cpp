@@ -65,6 +65,7 @@ int main(void)
 {
 
   char videofile[20] = "video.avi";
+  char key;
 
   VideoCapture capture;
 
@@ -115,6 +116,7 @@ int main(void)
 
     // Nosso código
 
+    
     // Fim nosso código
 
 
