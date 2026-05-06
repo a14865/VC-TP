@@ -44,7 +44,7 @@ principal da solução final.
 #include <opencv2\videoio.hpp>
 
 extern "C" {
-#include "vc.h"
+//#include "vc.h"
 }
 
 
@@ -72,7 +72,7 @@ void vc_timer(void) {
 
 int main(void) {
 	// V�deo
-	char videofile[20] = "video.avi";
+	char videofile[100] = "../data/raw/video.avi";
 	cv::VideoCapture capture;
 	struct
 	{
