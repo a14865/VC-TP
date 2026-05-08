@@ -194,6 +194,44 @@ long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, 
 	return counttotalbytes;
 }
 
+void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int width, int height)
+{
+	int x, y;
+	int countbits;
+	long int pos;
+	unsigned char *p = databit;
+
+	countbits = 1;
+
+	for(y=0; y<height; y++)
+	{
+		for(x=0; x<width; x++)
+		{
+			pos = width * y + x;
+
+			if(countbits <= 8)
+			{
+				// Numa imagem PBM:
+				// 1 = Preto
+				// 0 = Branco
+				//datauchar[pos] = (*p & (1 << (8 - countbits))) ? 1 : 0;
+
+				// Na nossa imagem:
+				// 1 = Branco
+				// 0 = Preto
+				datauchar[pos] = (*p & (1 << (8 - countbits))) ? 0 : 1;
+				
+				countbits++;
+			}
+			if((countbits > 8) || (x == width - 1))
+			{
+				p++;
+				countbits = 1;
+			}
+		}
+	}
+}
+
 IVC *vc_read_image(char *filename)
 {
 	FILE *file = NULL;
@@ -1159,14 +1197,14 @@ int vc_hsv_segmentation_ze(IVC *src, IVC *dst, int hmin, int hmax, int smin, int
 		if (hue_ok && sv_ok)
 		{
 			datadst[i] = 255; //datasrc[i];
-			//datadst[i + 1] = 255; //datasrc[i + 1];
-			//datadst[i + 2] = 255; //datasrc[i + 2];
+			datadst[i + 1] = 255; //datasrc[i + 1];
+			datadst[i + 2] = 255; //datasrc[i + 2];
 		}
 		else
 		{
 			datadst[i] = 0;
-			//datadst[i + 1] = 0;
-			// datadst[i + 2] = 0;
+			datadst[i + 1] = 0;
+			datadst[i + 2] = 0;
 		}
 	}
 
@@ -2135,8 +2173,6 @@ int vc_binary_erode_raul(IVC *src, IVC *dst, int kernel) {
 
 	offset = (kernel - 1) / 2;
 
-	printf("%d", offset);
-
 	for (int x = 0; x < width; x++) {
 		
 		for (int y = 0; y < height; y++) {
@@ -2227,8 +2263,8 @@ int vc_image_open_ricardo(IVC *src, IVC *dst, int kernelErode, int kernelDilate)
 	if(src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1) return 0;
 
 	IVC* img = vc_image_new(src->width, src->height, src->channels, src->levels);
-	vc_binary_erode(src, img, kernelErode);
-	vc_binary_dilate(img, dst, kernelDilate);
+	vc_binary_erode_ricardo(src, img, kernelErode);
+	vc_binary_dilate_ricardo(img, dst, kernelDilate);
 
 	vc_image_free(img);
 
@@ -2240,8 +2276,8 @@ int vc_image_close_ricardo(IVC *src, IVC *dst, int kernelDilate, int kernelErode
 	if(src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1) return 0;
 
 	IVC* img = vc_image_new(src->width, src->height, src->channels, src->levels);
-	vc_binary_dilate(src, img, kernelDilate);
-	vc_binary_erode(img, dst, kernelErode);
+	vc_binary_dilate_ricardo(src, img, kernelDilate);
+	vc_binary_erode_ricardo(img, dst, kernelErode);
 
 	vc_image_free(img);
 
@@ -3264,73 +3300,73 @@ int vc_gray_histogram_show_ricardo(IVC *src, IVC *dst){
 	return 1;
 }
 
-int vc_gray_histogram_show_ze(IVC * src, IVC *dst)
-{
-	#define length 256
-	unsigned char *datasrc = (unsigned char *)src->data;
-	unsigned char *datadst = (unsigned char *)dst->data;
-	int height = src->height;
-	int width = src->width;
-	int bytesperline = src->bytesperline;
-	int channels = src->channels;
-	int hist[length] = {0};
-	int pos;
-	int max = 0;
-	int size = dst->height * dst->width * dst->channels;
-	int numPixeis;
+// int vc_gray_histogram_show_ze(IVC * src, IVC *dst)
+// {
+// 	#define length 256
+// 	unsigned char *datasrc = (unsigned char *)src->data;
+// 	unsigned char *datadst = (unsigned char *)dst->data;
+// 	int height = src->height;
+// 	int width = src->width;
+// 	int bytesperline = src->bytesperline;
+// 	int channels = src->channels;
+// 	int hist[length] = {0};
+// 	int pos;
+// 	int max = 0;
+// 	int size = dst->height * dst->width * dst->channels;
+// 	int numPixeis;
 
-	//Preencher a imagem de destino com todos os pixeis a zero
-	for(int i = 0; i < size; i++)
-	{
-		dst->data[i] = 0;
-	}
+// 	//Preencher a imagem de destino com todos os pixeis a zero
+// 	for(int i = 0; i < size; i++)
+// 	{
+// 		dst->data[i] = 0;
+// 	}
 
-	//Guardar número de pixeis no array
-	for(int x = 0; x < width; x++)
-	{
-		for(int y = 0; y < height; y++)
-		{
-			pos = (y * bytesperline) + (x * channels);
+// 	//Guardar número de pixeis no array
+// 	for(int x = 0; x < width; x++)
+// 	{
+// 		for(int y = 0; y < height; y++)
+// 		{
+// 			pos = (y * bytesperline) + (x * channels);
 			
-			hist[datasrc[pos]]++;
-		}
-	}
+// 			hist[datasrc[pos]]++;
+// 		}
+// 	}
 
-	//Debug
-	// for(int z = 0; z < length; z++)
-	// {
-	// 	printf("%d\n", hist[z]);
-	// }
+// 	//Debug
+// 	// for(int z = 0; z < length; z++)
+// 	// {
+// 	// 	printf("%d\n", hist[z]);
+// 	// }
 
-	//Ciclo para encontrar máximo
-	for(int m = 0; m < length; m++)
-	{		
-		if(hist[m] > max) max = hist[m]; 		
-	}
+// 	//Ciclo para encontrar máximo
+// 	for(int m = 0; m < length; m++)
+// 	{		
+// 		if(hist[m] > max) max = hist[m]; 		
+// 	}
 
-	// printf("%d", max);
+// 	// printf("%d", max);
 
-	//Ciclo para escrever os pixeis brancos na imagem de destino
-	//Percorrer o array hist[]
-	for(int posArr = 0; posArr <= length - 1; posArr++)
-	{
-		//Validar se a posição do array é diferente de 0
-		if(hist[posArr] != 0)
-		{
-			//Transformar o numero de pixeis na escala de 256
-			numPixeis = (hist[posArr] * dst->height) / max;
+// 	//Ciclo para escrever os pixeis brancos na imagem de destino
+// 	//Percorrer o array hist[]
+// 	for(int posArr = 0; posArr <= length - 1; posArr++)
+// 	{
+// 		//Validar se a posição do array é diferente de 0
+// 		if(hist[posArr] != 0)
+// 		{
+// 			//Transformar o numero de pixeis na escala de 256
+// 			numPixeis = (hist[posArr] * dst->height) / max;
 
-			int xDst = posArr;
-			for(int yDst = dst->height - 1; yDst >= dst->height - numPixeis; yDst--)
-			{
-				int posDst = yDst * bytesperline + xDst * channels;
-				dst->data[posDst] = 255;
-			}
-		}		
-	}	
+// 			int xDst = posArr;
+// 			for(int yDst = dst->height - 1; yDst >= dst->height - numPixeis; yDst--)
+// 			{
+// 				int posDst = yDst * bytesperline + xDst * channels;
+// 				dst->data[posDst] = 255;
+// 			}
+// 		}		
+// 	}	
 
-	return 1;
-}
+// 	return 1;
+// }
 
 
 //Função que realize a equalização de imagens em tons de cinzento.
@@ -3829,7 +3865,7 @@ int vc_gray_lowpass_median_filter_raul(IVC *src, IVC *dst, int kernelsize) {
 		for (int y = 0; y < height; y++) {
 			pos = y * bytesperline + x * channels;
 
-			int values[kernelsize * kernelsize];
+			int *values = (int*)malloc(sizeof(int));
 			int count = 0;
 
 			for(int ix = -offset; ix <= offset; ix++){
@@ -3875,7 +3911,7 @@ int vc_gray_lowpass_median_filter_ze(IVC *src, IVC *dst, int kernelsize) {
 		for (int y = 0; y < height; y++) {
 			pos = y * bytesperline + x * channels;
 
-			int values[kernelsize * kernelsize];
+			int *values = (int*)malloc(sizeof(int));
 			int count = 0;
 
 			for(int ix = -offset; ix <= offset; ix++){
@@ -4023,270 +4059,273 @@ int vc_gray_lowpass_gaussian_ze(IVC *src, IVC *dst)
 
 
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//    FUNÇÕES: EXTRAS
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Ricardo-----------------------------------------------------------------------------
-int segmentar_cerebro_preto(IVC *src, IVC *dst, int *total)
-{
-    IVC *hsv = NULL;
-    int x, y;
-    long int pos_src, pos_dst, pos_hsv;
-    int S, V;
-    int count = 0;
+// //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// //    FUNÇÕES: EXTRAS
+// //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// //Ricardo-----------------------------------------------------------------------------
+// int segmentar_cerebro_preto(IVC *src, IVC *dst, int *total)
+// {
+//     IVC *hsv = NULL;
+//     int x, y;
+//     long int pos_src, pos_dst, pos_hsv;
+//     int S, V;
+//     int count = 0;
 
-    if(src == NULL || dst == NULL || total == NULL) return 0;
-    if(src->width != dst->width || src->height != dst->height) return 0;
-    if(src->channels != 3 || dst->channels != 3) return 0;
+//     if(src == NULL || dst == NULL || total == NULL) return 0;
+//     if(src->width != dst->width || src->height != dst->height) return 0;
+//     if(src->channels != 3 || dst->channels != 3) return 0;
 
-    hsv = vc_image_new(src->width, src->height, 3, 255);
-    if(hsv == NULL) return 0;
+//     hsv = vc_image_new(src->width, src->height, 3, 255);
+//     if(hsv == NULL) return 0;
 
-    if(vc_rgb_to_hsv(src, hsv) == 0)
-    {
-        vc_image_free(hsv);
-        return 0;
-    }
+//     if(vc_rgb_to_hsv(src, hsv) == 0)
+//     {
+//         vc_image_free(hsv);
+//         return 0;
+//     }
 
-    for(y = 0; y < src->height; y++)
-    {
-        for(x = 0; x < src->width; x++)
-        {
-            pos_src = y * src->bytesperline + x * src->channels;
-            pos_dst = y * dst->bytesperline + x * dst->channels;
-            pos_hsv = y * hsv->bytesperline + x * hsv->channels;
+//     for(y = 0; y < src->height; y++)
+//     {
+//         for(x = 0; x < src->width; x++)
+//         {
+//             pos_src = y * src->bytesperline + x * src->channels;
+//             pos_dst = y * dst->bytesperline + x * dst->channels;
+//             pos_hsv = y * hsv->bytesperline + x * hsv->channels;
 
-            S = hsv->data[pos_hsv + 1];
-            V = hsv->data[pos_hsv + 2];
+//             S = hsv->data[pos_hsv + 1];
+//             V = hsv->data[pos_hsv + 2];
 
-            /* Fundo preto: S entre 0 e 50% e V entre 0 e 30% */
-            if(S <= 127 && V <= 76)
-            {
-                dst->data[pos_dst]     = 255;
-                dst->data[pos_dst + 1] = 255;
-                dst->data[pos_dst + 2] = 0;
-            }
-            else
-            {
-                /* Cérebro */
-                dst->data[pos_dst]     = 0;
-                dst->data[pos_dst + 1] = 0;
-                dst->data[pos_dst + 2] = 0;
-                count++;
-            }
-        }
-    }
+//             /* Fundo preto: S entre 0 e 50% e V entre 0 e 30% */
+//             if(S <= 127 && V <= 76)
+//             {
+//                 dst->data[pos_dst]     = 255;
+//                 dst->data[pos_dst + 1] = 255;
+//                 dst->data[pos_dst + 2] = 0;
+//             }
+//             else
+//             {
+//                 /* Cérebro */
+//                 dst->data[pos_dst]     = 0;
+//                 dst->data[pos_dst + 1] = 0;
+//                 dst->data[pos_dst + 2] = 0;
+//                 count++;
+//             }
+//         }
+//     }
 
-    *total = count;
+//     *total = count;
 
-    vc_image_free(hsv);
-    return 1;
-}
+//     vc_image_free(hsv);
+//     return 1;
+// }
 
-int analisar_pet(IVC *src, IVC *seg, int total_cerebro)
-{
-    IVC *hsv = NULL;
-    int x, y;
-    long int pos_seg, pos_hsv;
-    int vermelho = 0, amarelo = 0, verde = 0, azul = 0;
-    int H, S, V;
-    int rs, gs, bs;
+// int analisar_pet(IVC *src, IVC *seg, int total_cerebro)
+// {
+//     IVC *hsv = NULL;
+//     int x, y;
+//     long int pos_seg, pos_hsv;
+//     int vermelho = 0, amarelo = 0, verde = 0, azul = 0;
+//     int H, S, V;
+//     int rs, gs, bs;
 
-    if(src == NULL || seg == NULL) return 0;
-    if(src->channels != 3 || seg->channels != 3) return 0;
-    if(src->width != seg->width || src->height != seg->height) return 0;
-    if(total_cerebro <= 0) return 0;
+//     if(src == NULL || seg == NULL) return 0;
+//     if(src->channels != 3 || seg->channels != 3) return 0;
+//     if(src->width != seg->width || src->height != seg->height) return 0;
+//     if(total_cerebro <= 0) return 0;
 
-    hsv = vc_image_new(src->width, src->height, 3, 255);
-    if(hsv == NULL) return 0;
+//     hsv = vc_image_new(src->width, src->height, 3, 255);
+//     if(hsv == NULL) return 0;
 
-    if(vc_rgb_to_hsv(src, hsv) == 0)
-    {
-        vc_image_free(hsv);
-        return 0;
-    }
+//     if(vc_rgb_to_hsv(src, hsv) == 0)
+//     {
+//         vc_image_free(hsv);
+//         return 0;
+//     }
 
-    for(y = 0; y < src->height; y++)
-    {
-        for(x = 0; x < src->width; x++)
-        {
-            pos_seg = y * seg->bytesperline + x * seg->channels;
-            pos_hsv = y * hsv->bytesperline + x * hsv->channels;
+//     for(y = 0; y < src->height; y++)
+//     {
+//         for(x = 0; x < src->width; x++)
+//         {
+//             pos_seg = y * seg->bytesperline + x * seg->channels;
+//             pos_hsv = y * hsv->bytesperline + x * hsv->channels;
 
-            rs = seg->data[pos_seg];
-            gs = seg->data[pos_seg + 1];
-            bs = seg->data[pos_seg + 2];
+//             rs = seg->data[pos_seg];
+//             gs = seg->data[pos_seg + 1];
+//             bs = seg->data[pos_seg + 2];
 
-            /* Só contar píxeis do cérebro */
-            if(!(rs == 0 && gs == 0 && bs == 0))
-                continue;
+//             /* Só contar píxeis do cérebro */
+//             if(!(rs == 0 && gs == 0 && bs == 0))
+//                 continue;
 
-            H = hsv->data[pos_hsv];
-            S = hsv->data[pos_hsv + 1];
-            V = hsv->data[pos_hsv + 2];
+//             H = hsv->data[pos_hsv];
+//             S = hsv->data[pos_hsv + 1];
+//             V = hsv->data[pos_hsv + 2];
 
-            /* Só analisar pixels com cor forte */
-            if(S < 127 || V < 127)
-                continue;
+//             /* Só analisar pixels com cor forte */
+//             if(S < 127 || V < 127)
+//                 continue;
 
-            /* Vermelho: 0-45 ou 291-360 */
-            if((H >= 0 && H <= 32) || (H >= 206 && H <= 255))
-            {
-                vermelho++;
-            }
-            /* Amarelo: 46-70 */
-            else if(H >= 33 && H <= 50)
-            {
-                amarelo++;
-            }
-            /* Verde: 71-160 */
-            else if(H >= 51 && H <= 113)
-            {
-                verde++;
-            }
-        }
-    }
+//             /* Vermelho: 0-45 ou 291-360 */
+//             if((H >= 0 && H <= 32) || (H >= 206 && H <= 255))
+//             {
+//                 vermelho++;
+//             }
+//             /* Amarelo: 46-70 */
+//             else if(H >= 33 && H <= 50)
+//             {
+//                 amarelo++;
+//             }
+//             /* Verde: 71-160 */
+//             else if(H >= 51 && H <= 113)
+//             {
+//                 verde++;
+//             }
+//         }
+//     }
 
-    /* Azul = resto */
-    azul = total_cerebro - vermelho - amarelo - verde;
+//     /* Azul = resto */
+//     azul = total_cerebro - vermelho - amarelo - verde;
 
-    printf("Numero de pixeis vermelhos: %d\n", vermelho);
-    printf("Numero de pixeis amarelos: %d\n", amarelo);
-    printf("Numero de pixeis verdes: %d\n", verde);
-    printf("Numero de pixeis azuis: %d\n", azul);
-    printf("Numero de pixeis do cerebro: %d\n", total_cerebro);
+//     printf("Numero de pixeis vermelhos: %d\n", vermelho);
+//     printf("Numero de pixeis amarelos: %d\n", amarelo);
+//     printf("Numero de pixeis verdes: %d\n", verde);
+//     printf("Numero de pixeis azuis: %d\n", azul);
+//     printf("Numero de pixeis do cerebro: %d\n", total_cerebro);
 
-    printf("0 a 25%%   : %.2f%%\n", (azul * 100.0) / total_cerebro);
-    printf("26 a 50%%  : %.2f%%\n", (verde * 100.0) / total_cerebro);
-    printf("51 a 75%%  : %.2f%%\n", (amarelo * 100.0) / total_cerebro);
-    printf("76 a 100%% : %.2f%%\n", (vermelho * 100.0) / total_cerebro);
+//     printf("0 a 25%%   : %.2f%%\n", (azul * 100.0) / total_cerebro);
+//     printf("26 a 50%%  : %.2f%%\n", (verde * 100.0) / total_cerebro);
+//     printf("51 a 75%%  : %.2f%%\n", (amarelo * 100.0) / total_cerebro);
+//     printf("76 a 100%% : %.2f%%\n", (vermelho * 100.0) / total_cerebro);
 
-    vc_image_free(hsv);
-    return 1;
-}
+//     vc_image_free(hsv);
+//     return 1;
+// }
 
-//Função para calcular a diferença entre duas imagens binárias (usada para operações morfológicas)
-int vc_binary_difference(IVC *src1, IVC *src2, IVC *dst)
-{
-    unsigned char *data1, *data2, *datadst;
-    int i;
-    int pos1, pos2, pos_dst;
+// //Função para calcular a diferença entre duas imagens binárias (usada para operações morfológicas)
+// /*int vc_binary_difference(IVC *src1, IVC *src2, IVC *dst)
+// {
+//     unsigned char *data1, *data2, *datadst;
+//     int i;
+//     int pos1, pos2, pos_dst;
 
-    if(src1 == NULL || src2 == NULL || dst == NULL) return 0;
-    if(src1->data == NULL || src2->data == NULL || dst->data == NULL) return 0;
-    if(src1->width != src2->width || src1->height != src2->height ||
-       src1->width != dst->width || src1->height != dst->height) return 0;
-    if(src1->channels != 1 || src2->channels != 1 || dst->channels != 1) return 0;
+//     if(src1 == NULL || src2 == NULL || dst == NULL) return 0;
+//     if(src1->data == NULL || src2->data == NULL || dst->data == NULL) return 0;
+//     if(src1->width != src2->width || src1->height != src2->height ||
+//        src1->width != dst->width || src1->height != dst->height) return 0;
+//     if(src1->channels != 1 || src2->channels != 1 || dst->channels != 1) return 0;
 
-    data1 = (unsigned char *)src1->data;
-    data2 = (unsigned char *)src2->data;
-    datadst = (unsigned char *)dst->data;
+//     data1 = (unsigned char *)src1->data;
+//     data2 = (unsigned char *)src2->data;
+//     datadst = (unsigned char *)dst->data;
 
-    int length = dst->height * dst->width * dst->channels;
+//     int length = dst->height * dst->width * dst->channels;
 
-    for (i = 0; i < length; i++)
-    {
-        datadst[i] = (data1[i] == 255 && data2[i] == 0) ? 255 : 0;
-    }
-    return 1;
-}
+//     for (i = 0; i < length; i++)
+//     {
+//         datadst[i] = (data1[i] == 255 && data2[i] == 0) ? 255 : 0;
+//     }
+//     return 1;
+// }*/
 
-int vc_erode_minus_dilate(IVC* srcEroded, IVC* srcDilated, IVC* dst){
+// int vc_erode_minus_dilate(IVC* srcEroded, IVC* srcDilated, IVC* dst){
 
-	int length = dst->height * dst->width * dst->channels;
+// 	int length = dst->height * dst->width * dst->channels;
 
-	for(int i = 0; i < length; i++){
+// 	for(int i = 0; i < length; i++){
 
-		dst->data[i] = srcEroded->data[i] - srcDilated->data[i];
-	}
+// 		dst->data[i] = srcEroded->data[i] - srcDilated->data[i];
+// 	}
 
-	return 1;
-}
+// 	return 1;
+// }
 
-//Função que verifica da mask for branco, mantém o pixel original, caso contrário, torna preto (usada para operações morfológicas)
-int vc_apply_mask(IVC* src, IVC* mask, IVC* dst){
+// //Função que verifica da mask for branco, mantém o pixel original, caso contrário, torna preto (usada para operações morfológicas)
+// int vc_apply_mask(IVC* src, IVC* mask, IVC* dst){
 
-    unsigned char* data_src = (unsigned char*)src->data;
-    unsigned char* data_mask = (unsigned char*)mask->data;
-    unsigned char* data_dst = (unsigned char*)dst->data;
+//     unsigned char* data_src = (unsigned char*)src->data;
+//     unsigned char* data_mask = (unsigned char*)mask->data;
+//     unsigned char* data_dst = (unsigned char*)dst->data;
 
-    int length = dst->height * dst->width * dst->channels;
+//     int length = dst->height * dst->width * dst->channels;
 
-    for(int i = 0; i < length; i++){
-        dst->data[i]=0;
-        data_dst[i] = (data_mask[i]==255) ? data_src[i] : 0;
-    }
+//     for(int i = 0; i < length; i++){
+//         dst->data[i]=0;
+//         data_dst[i] = (data_mask[i]==255) ? data_src[i] : 0;
+//     }
 
-    return 1;
-}
+//     return 1;
+// }
 
 
 
-//Raul--------------------------------------------------------------------------------
-// Não completo
-int vc_binary_dilate_gray(IVC *src, IVC *dst, int kernel) {
-	unsigned char *datasrc = (unsigned char *)src->data;
-	unsigned char *datadst = (unsigned char *)dst->data;
-	int height = src->height;
-	int width = src->width;
-	int bytesperline = src->bytesperline;
-	int channels = src->channels;
-	int offset = 0;
-	long int pos = 0;
-	long int posOffset = 0;
+// //Raul--------------------------------------------------------------------------------
+// // Não completo
+// int vc_binary_dilate_gray(IVC *src, IVC *dst, int kernel) {
+// 	unsigned char *datasrc = (unsigned char *)src->data;
+// 	unsigned char *datadst = (unsigned char *)dst->data;
+// 	int height = src->height;
+// 	int width = src->width;
+// 	int bytesperline = src->bytesperline;
+// 	int channels = src->channels;
+// 	int offset = 0;
+// 	long int pos = 0;
+// 	long int posOffset = 0;
 
-	// Check if the kernel is valid
-	if (kernel % 2 == 0 || kernel <= 0) {
-		printf("ERROR -> The kernel needs to be a positive odd number!\n");
-        getchar();
-        return 0;
-	}
+// 	// Check if the kernel is valid
+// 	if (kernel % 2 == 0 || kernel <= 0) {
+// 		printf("ERROR -> The kernel needs to be a positive odd number!\n");
+//         getchar();
+//         return 0;
+// 	}
 
-	offset = (kernel - 1) / 2;
+// 	offset = (kernel - 1) / 2;
 
-	printf("%d", offset);
+// 	printf("%d", offset);
 
-	for (int x = 0; x < width; x++) {
+// 	for (int x = 0; x < width; x++) {
 		
-		for (int y = 0; y < height; y++) {
-			pos = y * bytesperline + x * channels;
+// 		for (int y = 0; y < height; y++) {
+// 			pos = y * bytesperline + x * channels;
 
-			dst->data[pos] = src->data[pos];
+// 			dst->data[pos] = src->data[pos];
 			
-			for (int ix = -offset; ix <= offset; ix++) {
-				for (int iy = -offset; iy <= offset; iy++) {
-					if((x + ix) >= src->width || (y + iy) >= src->height || (x + ix) < 0 || (y + iy) < 0) continue;
+// 			for (int ix = -offset; ix <= offset; ix++) {
+// 				for (int iy = -offset; iy <= offset; iy++) {
+// 					if((x + ix) >= src->width || (y + iy) >= src->height || (x + ix) < 0 || (y + iy) < 0) continue;
 					
-					posOffset = (y + iy) * bytesperline + (x + ix) * channels;
+// 					posOffset = (y + iy) * bytesperline + (x + ix) * channels;
 
-					if(src->data[posOffset] == 255) {
-						dst->data[pos] = 255;
-						dst->data[pos + 1] = 255;
-						dst->data[pos + 2] = 255;
-						break;
-					}
-				}
+// 					if(src->data[posOffset] == 255) {
+// 						dst->data[pos] = 255;
+// 						dst->data[pos + 1] = 255;
+// 						dst->data[pos + 2] = 255;
+// 						break;
+// 					}
+// 				}
 				
-				if(dst->data[pos] == 255) {
-					break;
-				}
-			}
-		}
+// 				if(dst->data[pos] == 255) {
+// 					break;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return 1;
+// }
+
+int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod){
+
+	int length = src->width * src->height * src->channels;
+
+	for(int i = 0; i < length; i += src->channels){
+
+		int s = (int)(src->data[i+1] * satMod);
+		int v = (int)(src->data[i+2] * valMod);
+
+		dst->data[i] = src->data[i];
+		dst->data[i+1] = s > 255 ? 255 : s < 0 ? 0 : s;
+		dst->data[i+2] = v > 255 ? 255 : v < 0 ? 0 : v;
 	}
 
 	return 1;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

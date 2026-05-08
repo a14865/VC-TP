@@ -181,4 +181,6 @@ int vc_rgb_to_hsv(IVC *src, IVC *dst);
 int vc_binary_erode(IVC *src, IVC *dst, int kernel);
 int vc_binary_dilate(IVC *src, IVC *dst, int kernel);
 
+int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);
+
 #endif // _VC_H_
