@@ -183,4 +183,55 @@ int vc_binary_dilate(IVC *src, IVC *dst, int kernel);
 
 int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);
 
+// FUN��ES: ALOCAR E LIBERTAR UMA IMAGEM
+IVC *vc_image_new(int width, int height, int channels, int levels);
+IVC *vc_image_free(IVC *image);
+
+// FUN��ES: LEITURA E ESCRITA DE IMAGENS (PBM, PGM E PPM)
+IVC *vc_read_image(char *filename);
+int vc_write_image(char *filename, IVC *image);
+int vc_gray_negative(IVC *srcdst);
+int vc_rgb_negative(IVC *srcdst);
+int vc_rgb_get_red_gray(IVC *srcdst);
+int vc_rgb_get_green_gray(IVC *srcdst);
+int vc_rgb_get_blue_gray(IVC *srcdst);
+int vc_rgb_to_gray(IVC *src, IVC *dst);
+int vc_rgb_to_hsv(IVC *src, IVC *dst);
+int vc_rgb_to_hsv_2(IVC *src, IVC *dst);
+int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax);
+int vc_scale_gray_to_rgb(IVC *src, IVC *dst);
+int vc_number_total_black_pixels(IVC *src, int *p);
+int vc_number_total_white_pixels(IVC *src, int *p);
+int vc_verify_images(IVC* src1, IVC* src2, IVC* dst);
+int vc_gray_to_binary(IVC *srcdst, int threshold);
+int vc_gray_to_binary_global_mean(IVC *srcdst);
+int vc_gray_to_binary_2thresholds(IVC *srcdst, int thresholdMin, int thresholdMax, int judge);
+int vc_gray_to_binary_midpoint(IVC *src, IVC *dst, int kernel);
+int vc_gray_to_binary_bernsen(IVC *src, IVC *dst, int kernel);
+int vc_gray_to_binary_niblack(IVC* src, IVC* dst, int kernel, float k);
+int vc_image_dilate(IVC *src, IVC *dst, int kernel);
+int vc_image_erode(IVC *src, IVC *dst, int kernel);
+int vc_image_open(IVC *src, IVC *dst, int kernelErode, int kernelDilate);
+int vc_image_close(IVC *src, IVC *dst, int kernelDilate, int kernelErode);
+int vc_erode_minus_dilate(IVC* srcEroded, IVC* srcDilated, IVC* dst);
+int vc_compare_after_morpho(IVC* srcOriginal, IVC* srcMorpho, IVC* dst);
+int vc_binary_blob_labelling_mine(IVC *src, IVC *dst, int kernel, int typeOfKernel);
+OVC* vc_binary_blob_labelling_prof(IVC *src, IVC *dst, int *nlabels);
+int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs);
+OVC *vc_binary_blob_labelling_buffer(IVC *src, IVC *dst, int *nlabels);
+OVC* vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels);
+int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kernel, int thickness, int colorR, int colorG, int colorB);
+int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB);
+int vc_gray_histogram_show(IVC *src, IVC *dst);
+int vc_gray_histogram_equalization(IVC *src, IVC *dst);
+int vc_gray_edge_prewitt(IVC *src, IVC *dst, float th);
+int vc_gray_edge_prewitt_prof(IVC *src, IVC *dst, float th);
+int vc_gray_lowpass_mean_filter(IVC *src, IVC *dst, int kernelsize);
+int vc_gray_lowpass_median_filter(IVC *src, IVC *dst, int kernelsize);
+int vc_gray_lowpass_gaussian_filter(IVC *src, IVC *dst);
+int vc_gray_highpass_filter(IVC *src, IVC *dst);
+int vc_gray_highpass_filter_enhance(IVC *src, IVC *dst, int gain);
+int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);
+int vc_hsv_histogram_equalization(IVC *src, IVC *dst);
+
 #endif // _VC_H_
