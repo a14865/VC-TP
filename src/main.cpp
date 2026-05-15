@@ -64,6 +64,12 @@ int main(void)
     // Linha baseada na metade do diâmetro da maior laranja possível (100mm = ~509px)
     int linhaAtivacao = 255; 
 
+    // Linha de detecção baseada na posição onde as laranjas começam a ser visíveis (testes indicam que é por volta dos 100px)
+    int linhaDetecao = 100; 
+
+    int totalOranges = 0;
+    int lastOrangeFrame = 0;
+
     // OTIMIZAÇÃO DAS FUNÇÕES PARA LIMPEZA DE IMAGEM
     Mat elementClose = getStructuringElement(MORPH_ELLIPSE, Size(15, 15));
     Mat elementOpen = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -71,6 +77,8 @@ int main(void)
     // Inicio do vídeo
     while (key != 'q')
     {
+        // Reset da contagem de laranjas por frame
+        int nOrangesPerFrame = 0;
 
         if (!capture.read(frame)) {
             cout << "Fim do vídeo alcançado." << endl;
@@ -80,7 +88,6 @@ int main(void)
         video.nFrame = (int)capture.get(CAP_PROP_POS_FRAMES);
         cvtColor(frame, frameRGB, COLOR_BGR2RGB);
         memcpy(image->data, frameRGB.data, video.height * video.width * 3);
-
         
         // 1. CONVERSÃO E SEGMENTAÇÃO
         vc_rgb_to_hsv(image, imageHSV);        
@@ -101,21 +108,35 @@ int main(void)
 
         if (blobs != NULL) 
         {
-
             vc_binary_blob_info(imageLabels, blobs, nlabels);
+
+            printf("Frame %d/%d - Blobs detectados: %d\n", video.nFrame, video.nTotalFrames, nlabels);
 
             for(int i = 0; i < nlabels; i++) {
 
                 // Se houver blobs mais pequenos que 60000px ignora
                 if (blobs[i].area < 60000) continue;
 
+                // Contagem de laranjas por frame
+                nOrangesPerFrame++;
+
+                printf("Numero de Laranjas detectadas: %d\n", nOrangesPerFrame);
+
                 vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 3, 5, 255, 0, 0);
 
                 // ATIVAÇÃO: Só processa e desenha a Bounding Box se passar a linha
                 if(blobs[i].yc > linhaAtivacao && blobs[i]. yc < video.height - linhaAtivacao) {
+                  // Passamos apenas o blob atual (&blobs[i]) e nlabels=1
+                  vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+                }
 
-                    // Passamos apenas o blob atual (&blobs[i]) e nlabels=1
-                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+                // DETECÇÃO: Verifica se o centro de massa do blob está dentro da linha de detecção (margem de 5px para evitar falhas de detecção)
+                if(blobs[i].yc >= (linhaDetecao - 5) && blobs[i].yc <= (linhaDetecao + 5)) {
+                  // Se a última detecção de laranja foi há mais de 10 frames, conta como uma nova laranja
+                  if(lastOrangeFrame == 0 || (video.nFrame - lastOrangeFrame) > 10) {
+                    lastOrangeFrame = video.nFrame;
+                    totalOranges++;
+                  }
                 }
             }
 
@@ -126,6 +147,13 @@ int main(void)
         // 4. TRADUÇÃO E EXIBIÇÃO
         memcpy(frameRGB.data, image->data, video.width * video.height * 3);
         cvtColor(frameRGB, frame, COLOR_RGB2BGR);
+
+        std::string str = std::string("Total Laranjas: ").append(std::to_string(totalOranges));
+        cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+        cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+        std::string str2 = std::string("Laranjas No Frame: ").append(std::to_string(nOrangesPerFrame));
+        cv::putText(frame, str2, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+        cv::putText(frame, str2, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
 
         // Exibir janelas
         imshow("VC - SEGMENTACAO LIMPA", frameSeg);
