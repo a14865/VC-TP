@@ -11,13 +11,15 @@ using namespace std;
 
 extern "C"
 {
-#include "../include/vc.h"
+#include "../include/tp_utils.h"
+#include "../include/tp_classification.h"
+#include "../include/tp_segmentation.h"
 }
 
 int main(void)
 {
 
-    string videofile = "video.avi";
+    string videofile = "../data/raw/video.avi";
     char key = 0;
 
     VideoCapture capture;
@@ -34,7 +36,7 @@ int main(void)
 
     if (!capture.isOpened())
     {
-        cerr << "Erro ao abrir o ficheiro de vídeo!\n";
+        cerr << "Erro ao abrir o ficheiro de video!\n";
         return 1;
     }
 

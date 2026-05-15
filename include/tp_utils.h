@@ -30,3 +30,45 @@ NOTAS:
 As funções declaradas aqui devem manter um caráter genérico e transversal.
 ===============================================================================
 */
+
+#ifndef TP_UTILS_H
+#define TP_UTILS_H
+
+#include <stdio.h>
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//             ESTRUTURAS DE DADOS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Estrutura base de imagem
+typedef struct {
+    unsigned char *data;
+    int width;
+    int height;
+    int channels;
+    int levels;
+    int bytesperline;
+} IVC;
+
+// Estrutura de blobs (Objetos)
+typedef struct {
+    int x, y, width, height;    // Caixa Delimitadora (Bounding Box)
+    int area;                   // Área
+    int xc, yc;                 // Centro-de-massa
+    int perimeter;              // Perímetro
+    int label;                  // Etiqueta
+} OVC;
+
+//Protótipos
+IVC *vc_image_new(int width, int height, int channels, int levels);
+IVC *vc_image_free(IVC *image);
+char *netpbm_get_token(FILE *file, char *tok, int len);
+long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, int width, int height);
+void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int width, int height);
+IVC *vc_read_image(char *filename);
+int vc_write_image(char *filename, IVC *image);
+
+//Funções de Validação
+void valImages(IVC *img1, IVC *img2);
+
+#endif

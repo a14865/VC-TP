@@ -187,9 +187,7 @@ int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float
 IVC *vc_image_new(int width, int height, int channels, int levels);
 IVC *vc_image_free(IVC *image);
 
-// FUN��ES: LEITURA E ESCRITA DE IMAGENS (PBM, PGM E PPM)
-IVC *vc_read_image(char *filename);
-int vc_write_image(char *filename, IVC *image);
+// // FUN��ES: LEITURA E ESCRITA DE IMAGENS (PBM, PGM E PPM)
 int vc_gray_negative(IVC *srcdst);
 int vc_rgb_negative(IVC *srcdst);
 int vc_rgb_get_red_gray(IVC *srcdst);

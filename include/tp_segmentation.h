@@ -33,3 +33,8 @@ Sempre que forem criadas novas funções de segmentação reutilizáveis, os seu
 protótipos devem ser adicionados aqui.
 ===============================================================================
 */
+#include "../include/tp_utils.h"
+
+int vc_rgb_to_hsv(IVC *src, IVC *dst);
+int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax);
+int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);

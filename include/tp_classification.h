@@ -33,3 +33,9 @@ NOTAS:
 por exemplo através de enums ou identificadores claros.
 ===============================================================================
 */
+#include <stdio.h>
+
+OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels);
+int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs);
+int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB);
+int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kernel, int thickness, int colorR, int colorG, int colorB);
