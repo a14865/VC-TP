@@ -67,7 +67,9 @@ int main(void)
     // Linha de detecção baseada na posição onde as laranjas começam a ser visíveis (testes indicam que é por volta dos 100px)
     int linhaDetecao = 100; 
 
+    // Número total de Laranjas
     int totalOranges = 0;
+    // última laranja na frame
     int lastOrangeFrame = 0;
 
     // OTIMIZAÇÃO DAS FUNÇÕES PARA LIMPEZA DE IMAGEM
@@ -104,13 +106,13 @@ int main(void)
         memcpy(imageOpen->data, frameSeg.data, video.width * video.height);
 
         // 3. ANÁLISE DE BLOBS E RASTREIO DOS MESMOS
-        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);
+        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);       
 
         if (blobs != NULL) 
         {
-            vc_binary_blob_info(imageLabels, blobs, nlabels);
+            vc_binary_blob_info(imageLabels, blobs, nlabels);            
 
-            printf("Frame %d/%d - Blobs detectados: %d\n", video.nFrame, video.nTotalFrames, nlabels);
+            // printf("Frame %d/%d - Blobs detectados: %d\n", video.nFrame, video.nTotalFrames, nlabels);
 
             for(int i = 0; i < nlabels; i++) {
 
@@ -128,6 +130,12 @@ int main(void)
                 if(blobs[i].yc > linhaAtivacao && blobs[i]. yc < video.height - linhaAtivacao) {
                   // Passamos apenas o blob atual (&blobs[i]) e nlabels=1
                   vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+
+                // Gravação das imagens das laranjas pós segmentação e marcação do centro de gravidade
+                //   char filename[256];
+                //   sprintf(filename,"../Images/Video%04d.pbm", video.nFrame);
+                //   printf("Saving image to: %s\n", filename);
+                //   vc_write_image(filename, imageSEG);
                 }
 
                 // DETECÇÃO: Verifica se o centro de massa do blob está dentro da linha de detecção (margem de 5px para evitar falhas de detecção)
