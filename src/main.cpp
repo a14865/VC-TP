@@ -5,6 +5,7 @@
 #include <opencv2\core.hpp>
 #include <opencv2\highgui.hpp>
 #include <opencv2\videoio.hpp>
+#include <math.h>
 
 using namespace cv;
 using namespace std;
@@ -74,6 +75,12 @@ int main(void)
     Mat elementClose = getStructuringElement(MORPH_ELLIPSE, Size(15, 15));
     Mat elementOpen = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
+    int blobsArea[100];
+    int blobsPerimeter[100];
+
+    int prevX = 0, prevY = 0, prevFrame = 0;
+    int uniqueBlobLabel = 0;
+
     // Inicio do vídeo
     while (key != 'q')
     {
@@ -110,8 +117,6 @@ int main(void)
         {
             vc_binary_blob_info(imageLabels, blobs, nlabels);
 
-            printf("Frame %d/%d - Blobs detectados: %d\n", video.nFrame, video.nTotalFrames, nlabels);
-
             for(int i = 0; i < nlabels; i++) {
 
                 // Se houver blobs mais pequenos que 60000px ignora
@@ -120,14 +125,37 @@ int main(void)
                 // Contagem de laranjas por frame
                 nOrangesPerFrame++;
 
-                printf("Numero de Laranjas detectadas: %d\n", nOrangesPerFrame);
-
                 vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 3, 5, 255, 0, 0);
 
                 // ATIVAÇÃO: Só processa e desenha a Bounding Box se passar a linha
-                if(blobs[i].yc > linhaAtivacao && blobs[i]. yc < video.height - linhaAtivacao) {
-                  // Passamos apenas o blob atual (&blobs[i]) e nlabels=1
-                  vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+                if(blobs[i].yc > linhaAtivacao) {
+                  // Mostrar o centro de massa apenas enquanto a laranja estiver entre as linhas de ativação
+                  if(blobs[i]. yc < video.height - linhaAtivacao){
+                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+                  }
+
+                  double defPrevX = fabs(prevX - blobs[i].xc);
+                  double defPrevY = fabs(prevY - blobs[i].yc);
+
+                  if(defPrevX < 20) {
+                    blobs[i].label = uniqueBlobLabel;
+                  } else {
+                    uniqueBlobLabel++;
+                    blobs[i].label = uniqueBlobLabel;
+                  }
+
+                  prevX = blobs[i].xc;
+                  prevY = blobs[i].yc;
+
+                  if(blobsArea[uniqueBlobLabel] <= 0) blobsArea[uniqueBlobLabel] = blobs[i].area;
+                  if(blobsPerimeter[uniqueBlobLabel] <= 0) blobsPerimeter[uniqueBlobLabel] = blobs[i].perimeter;
+
+                  printf("Blob %d - Label: %d, Area: %d, Perimetro: %d\n", i, blobs[i].label, blobsArea[uniqueBlobLabel], blobsPerimeter[uniqueBlobLabel]);
+
+                //   if(blobsArea[blobs[i].label] < blobs[i].area || blobsPerimeter[blobs[i].label] < blobs[i].perimeter) {
+                //     blobsArea[blobs[i].label] = blobs[i].area;
+                //     blobsPerimeter[blobs[i].label] = blobs[i].perimeter;
+                //   } 
                 }
 
                 // DETECÇÃO: Verifica se o centro de massa do blob está dentro da linha de detecção (margem de 5px para evitar falhas de detecção)
@@ -139,14 +167,30 @@ int main(void)
                   }
                 }
             }
-
-            // Memória liberta dentro do ciclo (Crucial para não crashar)
-            free(blobs);
         }
 
         // 4. TRADUÇÃO E EXIBIÇÃO
         memcpy(frameRGB.data, image->data, video.width * video.height * 3);
         cvtColor(frameRGB, frame, COLOR_RGB2BGR);
+
+        for(int i = 0; i < nlabels; i++) {
+
+            // Se houver blobs mais pequenos que 60000px ignora
+            if (blobs[i].area < 60000) continue;
+
+            if(blobs[i].yc > linhaAtivacao) {
+                std::string strArea = std::string("Area: ").append(std::to_string(blobsArea[blobs[i].label])).append("px");
+                cv::putText(frame, strArea, cv::Point(blobs[i].x + (blobs[i].width / 2), blobs[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
+                cv::putText(frame, strArea, cv::Point(blobs[i].x + (blobs[i].width / 2), blobs[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
+
+                std::string strPerimetro = std::string("Perimetro: ").append(std::to_string(blobsPerimeter[blobs[i].label])).append("px");
+                cv::putText(frame, strPerimetro, cv::Point(blobs[i].x + (blobs[i].width / 2), blobs[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
+                cv::putText(frame, strPerimetro, cv::Point(blobs[i].x + (blobs[i].width / 2), blobs[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
+            }
+        }
+
+        // Memória liberta dentro do ciclo (Crucial para não crashar)
+        free(blobs);
 
         std::string str = std::string("Total Laranjas: ").append(std::to_string(totalOranges));
         cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
