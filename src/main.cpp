@@ -211,6 +211,7 @@ int main(void)
         imshow("VC - SEGMENTACAO LIMPA", frameSeg);
         imshow("VC - ORIGINAL", frame);
 
+
         key = waitKey(25);
     }
 

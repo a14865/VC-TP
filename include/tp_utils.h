@@ -71,4 +71,7 @@ int vc_write_image(char *filename, IVC *image);
 //Funções de Validação
 void valImages(IVC *img1, IVC *img2);
 
+//Conversão de Pixeis para Milimetros
+int convertPixToMM(float pixelValue, float mmValue);
+
 #endif
