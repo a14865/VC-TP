@@ -68,7 +68,9 @@ int main(void)
     // Linha de detecção baseada na posição onde as laranjas começam a ser visíveis (testes indicam que é por volta dos 100px)
     int linhaDetecao = 100; 
 
+    // Número total de Laranjas
     int totalOranges = 0;
+    // última laranja na frame
     int lastOrangeFrame = 0;
 
     // OTIMIZAÇÃO DAS FUNÇÕES PARA LIMPEZA DE IMAGEM
@@ -113,7 +115,7 @@ int main(void)
         memcpy(imageOpen->data, frameSeg.data, video.width * video.height);
 
         // 3. ANÁLISE DE BLOBS E RASTREIO DOS MESMOS
-        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);
+        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);       
 
         if (blobs != NULL) 
         {
@@ -144,6 +146,36 @@ int main(void)
                 if(blobs[i].yc > linhaAtivacao && blobs[i].yc < video.height - linhaAtivacao) {
                     // Mostrar o centro de massa apenas enquanto a laranja estiver entre as linhas de ativação
                     vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+
+                // Gravação das imagens das laranjas pós segmentação e marcação do centro de gravidade
+                //   char filename[256];
+                //   sprintf(filename,"../Images/Video%04d.pbm", video.nFrame);
+                //   printf("Saving image to: %s\n", filename);
+                //   vc_write_image(filename, imageSEG);
+                  }
+
+                  double defPrevX = fabs(prevX - blobs[i].xc);
+                  double defPrevY = fabs(prevY - blobs[i].yc);
+
+                  if(defPrevX < 20) {
+                    blobs[i].label = uniqueBlobLabel;
+                  } else {
+                    uniqueBlobLabel++;
+                    blobs[i].label = uniqueBlobLabel;
+                  }
+
+                  prevX = blobs[i].xc;
+                  prevY = blobs[i].yc;
+
+                  if(blobsArea[uniqueBlobLabel] <= 0) blobsArea[uniqueBlobLabel] = blobs[i].area;
+                  if(blobsPerimeter[uniqueBlobLabel] <= 0) blobsPerimeter[uniqueBlobLabel] = blobs[i].perimeter;
+
+                  printf("Blob %d - Label: %d, Area: %d, Perimetro: %d\n", i, blobs[i].label, blobsArea[uniqueBlobLabel], blobsPerimeter[uniqueBlobLabel]);
+
+                //   if(blobsArea[blobs[i].label] < blobs[i].area || blobsPerimeter[blobs[i].label] < blobs[i].perimeter) {
+                //     blobsArea[blobs[i].label] = blobs[i].area;
+                //     blobsPerimeter[blobs[i].label] = blobs[i].perimeter;
+                //   } 
                 }
 
                 // DETECÇÃO: Verifica se o centro de massa do blob está dentro da linha de detecção (margem de 5px para evitar falhas de detecção)
