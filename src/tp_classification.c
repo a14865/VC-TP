@@ -284,50 +284,78 @@ int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs)
 
 int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB){
 
+	if(!srcdst || !blobs) return 0;
+
 	for(int i = 0; i < nlabels; i++){
 
-		int height = blobs[i].height;
-		int width = blobs[i].width;
-		int xc = blobs[i].xc;
-		int yc = blobs[i].yc;
+		int xMin = blobs[i].x - padding;
+		int yMin = blobs[i].y + padding;
+		int xMax = blobs[i].x + blobs[i].width + padding;
+		int yMax = blobs[i].y + blobs[i].height + padding;
 
-		for(int y = yc - (height / 2) - padding; y <= yc + (height / 2) + padding; y++){
-			for(int x = xc - (width / 2) - padding; x <= xc + (width / 2) + padding; x++){
+		for(int y = 0; y < thickness; y++){
 
-				int pos = y * srcdst->bytesperline + x * srcdst->channels;
+			int yTop = yMin + y;
+			int yBottom = yMax - y;
 
-				if (x - padding < 0 || x + padding >= srcdst->width || y - padding < 0 || y + padding >= srcdst->height) continue;
+			for(int x = xMin; x <= xMax; x++){
 
-				if(y == yc - (height / 2) - padding || y == yc + (height/2) + padding){
+				if (x >= 0 && x < srcdst->width){
 
-					for(int j = 0; j < thickness; j++){
+					if(yTop >= 0 && yTop < srcdst->height) {
 
-						srcdst->data[pos + (j * srcdst->bytesperline)] = colorR;
-						srcdst->data[pos + 1 + (j * srcdst->bytesperline)] = colorG;
-						srcdst->data[pos + 2 + (j * srcdst->bytesperline)] = colorB;
+						int pos = yTop * srcdst->bytesperline + x * srcdst->channels;
+						srcdst->data[pos] = colorR;
+						srcdst->data[pos + 1] = colorG;
+						srcdst->data[pos + 2] = colorB;
 					}
-				}
 
-				if(x == xc - (width / 2) - padding || x == xc + (width / 2) + padding){
+					if (yBottom >= 0 && yBottom < srcdst->height) {
+                        int pos = yBottom * srcdst->bytesperline + x * srcdst->channels;
+                        srcdst->data[pos] = colorR;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorB;
+                    }
+				}				
+            }
+        }
 
-					for(int j = 0, k = 0; j < thickness; j++, k += 3){
-						
-						srcdst->data[pos + k] = colorR;
-						srcdst->data[pos + 1 + k] = colorG;
-						srcdst->data[pos + 2 + k] = colorB;
-					}
-				}
-			}
-		}
-	}
+        for (int x = 0; x < thickness; x++) {
 
-	return 1;
+            int xLeft = xMin + x;
+            int xRight = xMax - x;
+
+            for (int y = yMin; y <= yMax; y++) {
+
+                if (y >= 0 && y < srcdst->height) {
+                
+                    if (xLeft >= 0 && xLeft < srcdst->width) {
+                        int pos = y * srcdst->bytesperline + xLeft * srcdst->channels;
+                        srcdst->data[pos] = colorR;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorB;
+                    }
+
+                    if (xRight >= 0 && xRight < srcdst->width) {
+                        int pos = y * srcdst->bytesperline + xRight * srcdst->channels;
+                        srcdst->data[pos] = colorR;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorB;
+                    }
+                }
+            }
+        }
+    }
+
+    return 1;
 }
 
 int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kernel, int thickness, int colorR, int colorG, int colorB){
 
-	for (int i = 0; i < nlabels; i++)
-    {
+	if(!srcdst || !blobs) return 0;
+
+	for (int i = 0; i < nlabels; i++){
+
         int xc = blobs[i].xc;
         int yc = blobs[i].yc;
 		int offset = (kernel - 1) / 2;
