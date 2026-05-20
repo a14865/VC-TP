@@ -33,3 +33,5 @@ As estruturas e funções aqui definidas devem refletir apenas medidas e
 características dos objetos, não decisões finais sobre a sua categoria.
 ===============================================================================
 */
+//Protótipos
+int orangeCaliber(int mmWidth);
