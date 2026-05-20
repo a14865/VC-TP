@@ -7,6 +7,8 @@
 #include <opencv2\videoio.hpp>
 #include <math.h>
 
+#define MAX_LARANJAS_NO_FRAME 10
+
 using namespace cv;
 using namespace std;
 
@@ -46,6 +48,8 @@ int main(void)
     video.width = (int)capture.get(CAP_PROP_FRAME_WIDTH);
     video.height = (int)capture.get(CAP_PROP_FRAME_HEIGHT);
 
+    string str;
+
     Mat frame;
     Mat frameRGB;
     Mat frameSeg(video.height, video.width, CV_8UC1);
@@ -58,38 +62,27 @@ int main(void)
     IVC *imageSEG = vc_image_new(video.width, video.height, 1, 255);
     IVC *imageOpen = vc_image_new(video.width, video.height, 1, 255);
     IVC *imageLabels = vc_image_new(video.width, video.height, 1, 255);    
+
+    // OTIMIZAÇÃO DAS FUNÇÕES PARA LIMPEZA DE IMAGEM
+    Mat elementClose = getStructuringElement(MORPH_ELLIPSE, Size(17, 17));
+    Mat elementOpen = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
     
     OVC *blobs;
     int nlabels = 0;
-    
-    // Linha baseada na metade do diâmetro da maior laranja possível (100mm = ~509px)
-    int linhaAtivacao = 255; 
-
-    // Linha de detecção baseada na posição onde as laranjas começam a ser visíveis (testes indicam que é por volta dos 100px)
-    int linhaDetecao = 100; 
-
-    // Número total de Laranjas
     int totalOranges = 0;
-    // última laranja na frame
-    int lastOrangeFrame = 0;
-
-    // OTIMIZAÇÃO DAS FUNÇÕES PARA LIMPEZA DE IMAGEM
-    Mat elementClose = getStructuringElement(MORPH_ELLIPSE, Size(15, 15));
-    Mat elementOpen = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-
-    int blobsArea[100];
-    int blobsPerimeter[100];
-
-    int prevX = 0, prevY = 0, prevFrame = 0;
-    int uniqueBlobLabel = 0;
+    // Linha baseada na metade do diâmetro da maior laranja possível
+    // Página 5 do Regulamento (100mm == 509px)
+    int linhaAtivacao = 150;
+    
+    // Array com os centros de massa antigos
+    OVC *orangesPreviousFrame = (OVC *)malloc(sizeof(OVC) * MAX_LARANJAS_NO_FRAME);
+    int numberOrangesPreviousFrame = 0;
 
     // Inicio do vídeo
     while (key != 'q')
-    {
-        OVC orangeBlobs[20] = {0}; // Array para armazenar os blobs de laranja detectados no frame atual
+    {   
 
-        // Reset da contagem de laranjas por frame
-        int nOrangesPerFrame = 0;
+        int currentFrameOranges = 0;
 
         if (!capture.read(frame)) {
             cout << "Fim do vídeo alcançado." << endl;
@@ -102,8 +95,8 @@ int main(void)
         
         // 1. CONVERSÃO E SEGMENTAÇÃO
         vc_rgb_to_hsv(image, imageHSV);        
-        vc_hsv_saturation_and_value_modified(imageHSV, imageHSVMod, 1.2, 0.8);
-        vc_hsv_segmentation(imageHSVMod, imageSEG, 10, 34, 30, 100, 13, 100);
+        vc_hsv_saturation_and_value_modified(imageHSV, imageHSVMod, 1, 255);
+        vc_hsv_segmentation(imageHSVMod, imageSEG, 10, 34, 30, 100, 0, 100);
         
         memcpy(frameSeg.data, imageSEG->data, video.width * video.height);
 
@@ -115,10 +108,15 @@ int main(void)
         memcpy(imageOpen->data, frameSeg.data, video.width * video.height);
 
         // 3. ANÁLISE DE BLOBS E RASTREIO DOS MESMOS
-        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);       
+        blobs = vc_binary_blob_labelling(imageOpen, imageLabels, &nlabels);
+
+        // Array dos centros de massa atuais
+        OVC orangesCurrentFrame[MAX_LARANJAS_NO_FRAME];
+        int numberOrangesCurrentFrame = 0;
 
         if (blobs != NULL) 
         {
+
             vc_binary_blob_info(imageLabels, blobs, nlabels);
 
             for(int i = 0; i < nlabels; i++) {
@@ -126,106 +124,94 @@ int main(void)
                 // Se houver blobs mais pequenos que 60000px ignora
                 if (blobs[i].area < 60000) continue;
 
-                if(orangeBlobs[nOrangesPerFrame].perimeter < blobs[i].perimeter && blobs[i].perimeter < 1400) {
-                    orangeBlobs[nOrangesPerFrame] = blobs[i];
-                } else {
-                    orangeBlobs[nOrangesPerFrame].xc = blobs[i].xc;
-                    orangeBlobs[nOrangesPerFrame].yc = blobs[i].yc;
-                    orangeBlobs[nOrangesPerFrame].x = blobs[i].x;
-                    orangeBlobs[nOrangesPerFrame].y = blobs[i].y;
-                }
-                
-                // printf("Blob %d: Area = %d, Perimetro = %d\n", blobs[i].label, blobs[i].area, blobs[i].perimeter);
-                
-                // Contagem de laranjas por frame
-                nOrangesPerFrame++;
+                int matchIndex = -1;
+                double minDistance = 1000000.0; 
 
-                vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 3, 5, 255, 0, 0);
+                for(int j = 0; j < numberOrangesPreviousFrame; j++){
 
-                // ATIVAÇÃO: Só processa e desenha a Bounding Box se passar a linha
-                if(blobs[i].yc > linhaAtivacao && blobs[i].yc < video.height - linhaAtivacao) {
-                    // Mostrar o centro de massa apenas enquanto a laranja estiver entre as linhas de ativação
-                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 11, 3, 0, 0, 0);
+                    double distanceX = (double)(blobs[i].xc - orangesPreviousFrame[j].xc);
+                    double distanceY = (double)(blobs[i].yc - orangesPreviousFrame[j].yc);
+                    double totalDistance = sqrt((distanceX * distanceX) + (distanceY * distanceY)); // TEOREMA DE PITÁGORAS [H^2 = SOMA(C^2)]
 
-                // Gravação das imagens das laranjas pós segmentação e marcação do centro de gravidade
-                //   char filename[256];
-                //   sprintf(filename,"../Images/Video%04d.pbm", video.nFrame);
-                //   printf("Saving image to: %s\n", filename);
-                //   vc_write_image(filename, imageSEG);
-                  }
+                    if(totalDistance < 100.0 && totalDistance < minDistance){
 
-                  double defPrevX = fabs(prevX - blobs[i].xc);
-                  double defPrevY = fabs(prevY - blobs[i].yc);
-
-                  if(defPrevX < 20) {
-                    blobs[i].label = uniqueBlobLabel;
-                  } else {
-                    uniqueBlobLabel++;
-                    blobs[i].label = uniqueBlobLabel;
-                  }
-
-                  prevX = blobs[i].xc;
-                  prevY = blobs[i].yc;
-
-                  if(blobsArea[uniqueBlobLabel] <= 0) blobsArea[uniqueBlobLabel] = blobs[i].area;
-                  if(blobsPerimeter[uniqueBlobLabel] <= 0) blobsPerimeter[uniqueBlobLabel] = blobs[i].perimeter;
-
-                  printf("Blob %d - Label: %d, Area: %d, Perimetro: %d\n", i, blobs[i].label, blobsArea[uniqueBlobLabel], blobsPerimeter[uniqueBlobLabel]);
-
-                //   if(blobsArea[blobs[i].label] < blobs[i].area || blobsPerimeter[blobs[i].label] < blobs[i].perimeter) {
-                //     blobsArea[blobs[i].label] = blobs[i].area;
-                //     blobsPerimeter[blobs[i].label] = blobs[i].perimeter;
-                //   } 
+                        minDistance = totalDistance;
+                        matchIndex = j;
+                    }
                 }
 
-                // DETECÇÃO: Verifica se o centro de massa do blob está dentro da linha de detecção (margem de 5px para evitar falhas de detecção)
-                if(blobs[i].yc >= (linhaAtivacao - 5) && blobs[i].yc <= (linhaAtivacao + 5)) {
-                  // Se a última detecção de laranja foi há mais de 10 frames, conta como uma nova laranja
-                  if(lastOrangeFrame == 0 || (video.nFrame - lastOrangeFrame) > 10) {
-                    lastOrangeFrame = video.nFrame;
-                    totalOranges++;
-                  }
+                if(matchIndex != -1){
+
+                    if(orangesPreviousFrame[matchIndex].yc < linhaAtivacao && blobs[i].yc >= linhaAtivacao){
+
+                        totalOranges++;
+                    }
+                    else if(orangesPreviousFrame[matchIndex].yc >= linhaAtivacao){
+
+                        blobs[i].area = orangesPreviousFrame[matchIndex].area;
+                        blobs[i].perimeter = orangesPreviousFrame[matchIndex].perimeter;
+                    }
+                }
+                
+                if(numberOrangesCurrentFrame < MAX_LARANJAS_NO_FRAME){
+
+                    orangesCurrentFrame[numberOrangesCurrentFrame++] = blobs[i];
+                }
+
+                // DESENHA A BOUNDING BOX E O CENTRO DE MASSA QUANDO PASSA PELA LINHA DE ATIVAÇÃO
+                if(blobs[i].yc > linhaAtivacao && blobs[i].yc < video.height - linhaAtivacao){
+
+                    vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 0, 1, 255, 0, 0);
+                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 5, 3, 255, 0, 0);                    
+
+                    currentFrameOranges++;
                 }
             }
+
+            for(int k = 0; k < numberOrangesCurrentFrame; k++){
+
+                orangesPreviousFrame[k] = orangesCurrentFrame[k];
+            }
+
+            numberOrangesPreviousFrame = numberOrangesCurrentFrame;
         }
 
-        // 4. TRADUÇÃO E EXIBIÇÃO
+        // 4. TRADUÇÃO E EXIBIÇÃO DO VÍDEO
         memcpy(frameRGB.data, image->data, video.width * video.height * 3);
         cvtColor(frameRGB, frame, COLOR_RGB2BGR);
 
-        printf("Oranges in frame: %d\n", nOrangesPerFrame);
+        for(int i = 0; i < numberOrangesCurrentFrame; i++){
 
-        for(int i = 0; i < nOrangesPerFrame; i++) {
-            // printf("nOrangesPerFrame: %d\n", nOrangesPerFrame);
-            // printf("Blob %d: Area = %d, Perimetro = %d\n", orangeBlobs[i].label, orangeBlobs[i].area, orangeBlobs[i].perimeter);
-
-            if(orangeBlobs[i].yc > linhaAtivacao) {
-                std::string strArea = std::string("Area: ").append(std::to_string(orangeBlobs[i].area)).append("px");
-                cv::putText(frame, strArea, cv::Point(orangeBlobs[i].x + (orangeBlobs[i].width / 2), orangeBlobs[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
-                cv::putText(frame, strArea, cv::Point(orangeBlobs[i].x + (orangeBlobs[i].width / 2), orangeBlobs[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
-
-                std::string strPerimetro = std::string("Perimetro: ").append(std::to_string(orangeBlobs[i].perimeter)).append("px");
-                cv::putText(frame, strPerimetro, cv::Point(orangeBlobs[i].x + (orangeBlobs[i].width / 2), orangeBlobs[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
-                cv::putText(frame, strPerimetro, cv::Point(orangeBlobs[i].x + (orangeBlobs[i].width / 2), orangeBlobs[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
+            if(orangesCurrentFrame[i].yc > linhaAtivacao){
+                
+                std::string strArea = std::string("Area: ").append(std::to_string(convertPixToMM(orangesCurrentFrame[i].area))).append("mm");
+                cv::putText(frame, strArea, cv::Point(orangesCurrentFrame[i].x + (orangesCurrentFrame[i].width / 2), orangesCurrentFrame[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
+                cv::putText(frame, strArea, cv::Point(orangesCurrentFrame[i].x + (orangesCurrentFrame[i].width / 2), orangesCurrentFrame[i].y - 20), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
+                std::string strPerimetro = std::string("Perimetro: ").append(std::to_string(convertPixToMM(orangesCurrentFrame[i].perimeter))).append("mm");
+                cv::putText(frame, strPerimetro, cv::Point(orangesCurrentFrame[i].x + (orangesCurrentFrame[i].width / 2), orangesCurrentFrame[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 0), 2);
+                cv::putText(frame, strPerimetro, cv::Point(orangesCurrentFrame[i].x + (orangesCurrentFrame[i].width / 2), orangesCurrentFrame[i].y - 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 1);
             }
         }
 
-        // Memória liberta dentro do ciclo (Crucial para não crashar)
+        // Memória liberta dentro do ciclo
         free(blobs);
 
-        std::string str = std::string("Total Laranjas: ").append(std::to_string(totalOranges));
+        str = string("-----------------------------------------------------------------------------------------------------------------------------------").append(to_string(totalOranges));
+		cv::putText(frame, str, cv::Point(0, linhaAtivacao), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 1);
+        str = string("-----------------------------------------------------------------------------------------------------------------------------------").append(to_string(totalOranges));
+		cv::putText(frame, str, cv::Point(0, video.height - linhaAtivacao), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 1);
+        str = string("Numero total de laranjas: ").append(to_string(totalOranges));
         cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-        cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
-        std::string str2 = std::string("Laranjas No Frame: ").append(std::to_string(nOrangesPerFrame));
-        cv::putText(frame, str2, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-        cv::putText(frame, str2, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+        str = string("Numero total de laranjas no frame: ").append(to_string(currentFrameOranges));
+        cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+		cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
 
         // Exibir janelas
         imshow("VC - SEGMENTACAO LIMPA", frameSeg);
         imshow("VC - ORIGINAL", frame);
 
-
-        key = waitKey(25);
+        key = waitKey(1);
     }
 
     // Limpeza de recursos
@@ -237,6 +223,8 @@ int main(void)
     vc_image_free(imageSEG);
     vc_image_free(imageOpen);
     vc_image_free(imageLabels);
+
+    free(orangesPreviousFrame);
 
     return 0;
 }

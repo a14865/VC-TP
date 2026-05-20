@@ -400,10 +400,11 @@ void valImages(IVC *img1, IVC *img2)
 }
 
 //Função de Conversão de Pixeis para Milimetros
-int convertPixToMM(float pixelValue, float mmValue)
-{
+int convertPixToMM(float pixelValue)
+{	
+
+	float mmValue = 0;
     int mmValueRound = 0;
-    pixelValue = 150;
     mmValue = (pixelValue * 55) / 280;
     
     mmValueRound = round(mmValue);

@@ -72,6 +72,6 @@ int vc_write_image(char *filename, IVC *image);
 void valImages(IVC *img1, IVC *img2);
 
 //Conversão de Pixeis para Milimetros
-int convertPixToMM(float pixelValue, float mmValue);
+int convertPixToMM(float pixelValue);
 
 #endif
