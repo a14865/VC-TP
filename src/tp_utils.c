@@ -412,4 +412,11 @@ int convertPixToMM(float pixelValue)
     return mmValueRound;
 }
 
+int convertPixAreaToMM2(float pixelArea)
+{
+    float scale = 55.0f / 280.0f;
+    float mmArea = pixelArea * scale * scale;
+
+    return (int)round(mmArea);
+}
 
