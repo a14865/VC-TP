@@ -68,8 +68,8 @@ int main(void)
     IVC *imageSEG = vc_image_new(video.width, video.height, 1, 255);
     IVC *imageLabels = vc_image_new(video.width, video.height, 1, 255);
 
-    Mat elementClose = getStructuringElement(MORPH_ELLIPSE, Size(17, 17));
-    Mat elementOpen = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+    Mat elementClose(17, 17, CV_8UC1, Scalar(255));
+    Mat elementOpen(7, 7, CV_8UC1, Scalar(255));
 
     OVC *blobs;
     int nlabels = 0;
@@ -292,7 +292,7 @@ int main(void)
                 strHomogeneity.append("mm)");
             }
 
-            string strMinTolerance = string("Tol. minimo: ");
+            string strMinTolerance = string("Tol. calibre: ");
             if (batchStats.count <= 1)
             {
                 strMinTolerance.append("-");
@@ -326,10 +326,10 @@ int main(void)
             }
 
             cv::putText(frame, strTotal, cv::Point(18, barTop + 24), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
-            cv::putText(frame, strCaliber, cv::Point(video.width / 2, barTop + 24), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
-            cv::putText(frame, strHomogeneity, cv::Point(18, barTop + 50), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
-            cv::putText(frame, strMinTolerance, cv::Point(video.width / 2, barTop + 50), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
+            cv::putText(frame, strHomogeneity, cv::Point(video.width / 2, barTop + 24), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
             cv::putText(frame, strCategory, cv::Point(18, barTop + 76), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
+            cv::putText(frame, strCaliber, cv::Point(18, barTop + 50), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
+            cv::putText(frame, strMinTolerance, cv::Point(video.width / 2, barTop + 50), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
             cv::putText(frame, strQualityTolerance, cv::Point(video.width / 2, barTop + 76), cv::FONT_HERSHEY_SIMPLEX, 0.46, cv::Scalar(255, 255, 255), 1);
         }
 
