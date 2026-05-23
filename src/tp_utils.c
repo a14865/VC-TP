@@ -1,43 +1,14 @@
-/*
+﻿/*
 ===============================================================================
 FICHEIRO: tp_utils.c
 
-DESCRIÇÃO:
-Este ficheiro contém funções auxiliares de uso transversal no projeto que não
-pertencem exclusivamente a nenhum dos módulos principais.
+DESCRICAO:
+Este ficheiro contem funcoes auxiliares usadas por varios modulos do projeto.
 
 OBJETIVO:
-Reunir utilitários que simplificam o código e evitam duplicação, mantendo a
-aplicação organizada.
-
-O QUE DEVE INCLUIR:
-- Funções de apoio genérico.
-- Conversões auxiliares entre estruturas.
-- Funções simples de desenho ou anotação, se necessário.
-- Rotinas de debug, validação ou apoio ao desenvolvimento.
-- Pequenas funções reutilizáveis por vários módulos.
-
-O QUE NÃO DEVE INCLUIR:
-- Algoritmos principais de segmentação.
-- Regras de classificação.
-- Tracking complexo.
-- Código demasiado específico de um único módulo.
-
-PORQUE EXISTE:
-Em projetos médios é comum surgirem funções pequenas mas úteis que não têm um
-local natural noutro módulo. Este ficheiro existe para evitar espalhar essas
-rotinas por vários ficheiros sem critério.
-
-RELAÇÃO COM OS RESTANTES FICHEIROS:
-- Pode ser utilizado por vários módulos.
-- Deve ser incluído através de tp_utils.h.
-
-NOTAS:
-Só devem ser colocadas aqui funções verdadeiramente auxiliares e reutilizáveis.
-Este ficheiro não deve tornar-se um depósito desorganizado de código.
+Reunir operacoes comuns, como gestao de imagens e conversoes de unidades.
 ===============================================================================
 */
-
 // Desabilita (no MSVC++) warnings de fun��es n�o seguras (fopen, sscanf, etc...)
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -57,6 +28,9 @@ Este ficheiro não deve tornar-se um depósito desorganizado de código.
 
 
 // Alocar memória para uma imagem
+/**
+ * @brief Aloca memoria para uma imagem IVC e inicializa os seus metadados.
+ */
 IVC *vc_image_new(int width, int height, int channels, int levels)
 {
 	IVC *image = (IVC *) malloc(sizeof(IVC));
@@ -80,6 +54,9 @@ IVC *vc_image_new(int width, int height, int channels, int levels)
 }
 
 // Libertar memória de uma imagem
+/**
+ * @brief Liberta a memoria ocupada por uma imagem IVC.
+ */
 IVC *vc_image_free(IVC *image)
 {
 	if(image != NULL)
@@ -101,6 +78,9 @@ IVC *vc_image_free(IVC *image)
 //    FUNÇÕES: LEITURA E ESCRITA DE IMAGENS (PBM, PGM E PPM)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+/**
+ * @brief Le o proximo token de um ficheiro NetPBM, ignorando espacos e comentarios.
+ */
 char *netpbm_get_token(FILE *file, char *tok, int len)
 {
 	char *t;
@@ -133,6 +113,9 @@ char *netpbm_get_token(FILE *file, char *tok, int len)
 	return tok;
 }
 
+/**
+ * @brief Converte uma imagem binaria em unsigned char para bytes compactados em bits.
+ */
 long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, int width, int height)
 {
 	int x, y;
@@ -177,6 +160,9 @@ long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, 
 	return counttotalbytes;
 }
 
+/**
+ * @brief Expande bytes compactados em bits para uma imagem binaria em unsigned char.
+ */
 void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int width, int height)
 {
 	int x, y;
@@ -215,6 +201,9 @@ void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int 
 	}
 }
 
+/**
+ * @brief Le uma imagem PBM, PGM ou PPM para a estrutura IVC.
+ */
 IVC *vc_read_image(char *filename)
 {
 	FILE *file = NULL;
@@ -334,6 +323,9 @@ IVC *vc_read_image(char *filename)
 	return image;
 }
 
+/**
+ * @brief Escreve uma imagem IVC em formato PBM, PGM ou PPM.
+ */
 int vc_write_image(char *filename, IVC *image)
 {
 	FILE *file = NULL;
@@ -391,6 +383,9 @@ int vc_write_image(char *filename, IVC *image)
 }
 
 //Funções de Validação
+/**
+ * @brief Verifica se duas imagens existem antes de uma operacao entre elas.
+ */
 void valImages(IVC *img1, IVC *img2)
 {
     if(img1 == NULL ||img2 == NULL)
@@ -400,6 +395,9 @@ void valImages(IVC *img1, IVC *img2)
 }
 
 //Função de Conversão de Pixeis para Milimetros
+/**
+ * @brief Converte uma medida linear em pixeis para milimetros.
+ */
 int convertPixToMM(float pixelValue)
 {	
 
@@ -412,6 +410,9 @@ int convertPixToMM(float pixelValue)
     return mmValueRound;
 }
 
+/**
+ * @brief Converte uma area em pixeis quadrados para milimetros quadrados.
+ */
 int convertPixAreaToMM2(float pixelArea)
 {
     float scale = 55.0f / 280.0f;

@@ -15,6 +15,13 @@ medidas e caracteristicas dos objetos segmentados.
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+/**
+ * @brief Etiqueta componentes conexas numa imagem binaria.
+ *
+ * A funcao percorre a mascara, atribui etiquetas aos pixeis brancos e resolve
+ * equivalencias entre etiquetas vizinhas. No fim devolve um vetor de blobs com
+ * as etiquetas encontradas.
+ */
 OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 {
 	int channels = src->channels;
@@ -165,6 +172,12 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	return blobs;
 }
 
+/**
+ * @brief Calcula as principais medidas de cada blob etiquetado.
+ *
+ * A funcao usa uma passagem pela imagem de etiquetas para calcular area,
+ * perimetro, centro de massa e bounding box de todos os blobs.
+ */
 int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs)
 {
 	unsigned char *data = (unsigned char *)src->data;
@@ -174,57 +187,73 @@ int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs)
 	int channels = src->channels;
 	int x, y, i;
 	long int pos;
-	int xmin, ymin, xmax, ymax;
-	long int sumx, sumy;
+	int labelIndex[256];
+	int xmin[256], ymin[256], xmax[256], ymax[256];
+	long int sumx[256], sumy[256];
 
 	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
 		return 0;
 	if (channels != 1)
 		return 0;
 
+	for (i = 0; i < 256; i++)
+	{
+		labelIndex[i] = -1;
+		xmin[i] = width - 1;
+		ymin[i] = height - 1;
+		xmax[i] = 0;
+		ymax[i] = 0;
+		sumx[i] = 0;
+		sumy[i] = 0;
+	}
+
 	for (i = 0; i < nblobs; i++)
 	{
-		xmin = width - 1;
-		ymin = height - 1;
-		xmax = 0;
-		ymax = 0;
-		sumx = 0;
-		sumy = 0;
+		labelIndex[blobs[i].label] = i;
 		blobs[i].area = 0;
 		blobs[i].perimeter = 0;
+	}
 
-		for (y = 1; y < height - 1; y++)
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
 		{
-			for (x = 1; x < width - 1; x++)
+			int label;
+			int index;
+
+			pos = y * bytesperline + x * channels;
+			label = data[pos];
+
+			if (label == 0) continue;
+
+			index = labelIndex[label];
+			if (index < 0) continue;
+
+			blobs[index].area++;
+			sumx[index] += x;
+			sumy[index] += y;
+
+			if (xmin[index] > x) xmin[index] = x;
+			if (ymin[index] > y) ymin[index] = y;
+			if (xmax[index] < x) xmax[index] = x;
+			if (ymax[index] < y) ymax[index] = y;
+
+			if ((data[pos - 1] != label) || (data[pos + 1] != label) ||
+				(data[pos - bytesperline] != label) || (data[pos + bytesperline] != label))
 			{
-				pos = y * bytesperline + x * channels;
-
-				if (data[pos] == blobs[i].label)
-				{
-					blobs[i].area++;
-					sumx += x;
-					sumy += y;
-
-					if (xmin > x) xmin = x;
-					if (ymin > y) ymin = y;
-					if (xmax < x) xmax = x;
-					if (ymax < y) ymax = y;
-
-					if ((data[pos - 1] != blobs[i].label) || (data[pos + 1] != blobs[i].label) ||
-						(data[pos - bytesperline] != blobs[i].label) || (data[pos + bytesperline] != blobs[i].label))
-					{
-						blobs[i].perimeter++;
-					}
-				}
+				blobs[index].perimeter++;
 			}
 		}
+	}
 
-		blobs[i].x = xmin;
-		blobs[i].y = ymin;
-		blobs[i].width = (xmax - xmin) + 1;
-		blobs[i].height = (ymax - ymin) + 1;
-		blobs[i].xc = sumx / MAX(blobs[i].area, 1);
-		blobs[i].yc = sumy / MAX(blobs[i].area, 1);
+	for (i = 0; i < nblobs; i++)
+	{
+		blobs[i].x = xmin[i];
+		blobs[i].y = ymin[i];
+		blobs[i].width = (xmax[i] - xmin[i]) + 1;
+		blobs[i].height = (ymax[i] - ymin[i]) + 1;
+		blobs[i].xc = sumx[i] / MAX(blobs[i].area, 1);
+		blobs[i].yc = sumy[i] / MAX(blobs[i].area, 1);
 	}
 
 	return 1;

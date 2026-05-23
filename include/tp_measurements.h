@@ -2,36 +2,36 @@
 ===============================================================================
 FICHEIRO: tp_measurements.h
 
-DESCRIÇÃO:
-Este ficheiro declara a interface pública do módulo de medição e análise de
-objetos segmentados.
+DESCRICAO:
+Interface publica do modulo de medicoes.
 
 OBJETIVO:
-Disponibilizar os protótipos das funções responsáveis pela extração de medidas
-das laranjas detetadas.
-
-O QUE DEVE INCLUIR:
-- Protótipos das funções implementadas em tp_measurements.c.
-- Estruturas auxiliares para armazenar medidas, se necessário.
-- Constantes relevantes para o cálculo de métricas.
-
-O QUE NÃO DEVE INCLUIR:
-- Implementação das funções.
-- Regras específicas de classificação.
-- Lógica de tracking.
-
-PORQUE EXISTE:
-Este ficheiro existe para separar de forma clara a interface do módulo de
-medições da sua implementação, promovendo legibilidade e reutilização.
-
-RELAÇÃO COM OS RESTANTES FICHEIROS:
-- Está associado a tp_measurements.c.
-- Será utilizado pelo main e pelo módulo de classificação.
-
-NOTAS:
-As estruturas e funções aqui definidas devem refletir apenas medidas e
-características dos objetos, não decisões finais sobre a sua categoria.
+Declarar as funcoes que etiquetam blobs e extraem medidas dos objetos.
 ===============================================================================
 */
-//Protótipos
-int orangeCaliber(int mmWidth);
+#ifndef TP_MEASUREMENTS_H
+#define TP_MEASUREMENTS_H
+
+#include "../include/tp_utils.h"
+
+/**
+ * @brief Etiqueta componentes conexas numa imagem binaria.
+ *
+ * @param src Mascara binaria de entrada.
+ * @param dst Imagem de etiquetas gerada.
+ * @param nlabels Ponteiro onde sera guardado o numero de blobs encontrados.
+ * @return OVC* Vetor de blobs alocado dinamicamente, ou NULL se nao houver blobs.
+ */
+OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels);
+
+/**
+ * @brief Calcula area, perimetro, bounding box e centro de massa dos blobs.
+ *
+ * @param src Imagem de etiquetas.
+ * @param blobs Vetor de blobs a preencher.
+ * @param nblobs Numero de blobs no vetor.
+ * @return int 1 se as medidas forem calculadas, 0 em caso de erro.
+ */
+int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs);
+
+#endif

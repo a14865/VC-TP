@@ -1,46 +1,20 @@
-/*
+﻿/*
 ===============================================================================
 FICHEIRO: tp_segmentation.c
 
-DESCRIÇÃO:
-Este ficheiro contém a implementação das funções responsáveis pela segmentação
-das laranjas nas frames do vídeo.
+DESCRICAO:
+Este ficheiro contem as funcoes usadas para segmentar as laranjas nas frames.
 
 OBJETIVO:
-Isolar a lógica de deteção visual dos objetos de interesse, transformando a
-imagem original em regiões segmentadas que possam posteriormente ser medidas e
-classificadas.
-
-O QUE DEVE INCLUIR:
-- Conversões necessárias para facilitar a segmentação.
-- Aplicação de thresholds ou critérios de cor/intensidade.
-- Filtragem e limpeza da máscara binária.
-- Operações morfológicas específicas da fase de segmentação.
-- Estratégias para reduzir ruído e melhorar a separação dos objetos.
-
-O QUE NÃO DEVE INCLUIR:
-- Cálculo de medidas finais dos objetos.
-- Regras de classificação comercial.
-- Gestão de contagens acumuladas entre frames.
-- Código de visualização principal.
-
-PORQUE EXISTE:
-A segmentação é uma etapa crítica e com bastante detalhe técnico. Mantê-la num
-ficheiro próprio melhora a clareza do projeto, facilita testes e permite afinar
-os parâmetros sem afetar os outros módulos.
-
-RELAÇÃO COM OS RESTANTES FICHEIROS:
-- Pode utilizar funções base de vc.c.
-- Produz resultados que serão usados em tp_measurements.c.
-- É chamado a partir de main.cpp.
-
-NOTAS:
-Este módulo deve ser pensado como a etapa que responde à pergunta:
-"Que píxeis pertencem às laranjas e quais pertencem ao fundo?"
+Converter a imagem para espacos de cor adequados e gerar a mascara binaria dos
+objetos que serao medidos e classificados.
 ===============================================================================
 */
 #include "../include/tp_segmentation.h"
 
+/**
+ * @brief Converte cada pixel RGB para HSV usando os canais normalizados.
+ */
 int vc_rgb_to_hsv(IVC *src, IVC *dst)
 {
 	//Validação
@@ -113,6 +87,9 @@ int vc_rgb_to_hsv(IVC *src, IVC *dst)
 	return 1;
 }
 
+/**
+ * @brief Cria uma mascara binaria selecionando pixeis dentro dos intervalos HSV.
+ */
 int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax)
 {
 
@@ -150,6 +127,9 @@ int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int sm
 	return 1;
 }
 
+/**
+ * @brief Multiplica saturacao e valor por fatores definidos e limita o resultado a 0-255.
+ */
 int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod)
 {
 

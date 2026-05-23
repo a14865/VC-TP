@@ -2,39 +2,51 @@
 ===============================================================================
 FICHEIRO: tp_segmentation.h
 
-DESCRIÇÃO:
-Este ficheiro declara a interface pública do módulo de segmentação.
+DESCRICAO:
+Interface publica do modulo de segmentacao.
 
 OBJETIVO:
-Definir os protótipos das funções de segmentação e tornar explícito quais são as
-operações disponibilizadas por este módulo ao resto da aplicação.
-
-O QUE DEVE INCLUIR:
-- Protótipos das funções implementadas em tp_segmentation.c.
-- Eventuais estruturas auxiliares específicas da segmentação.
-- Constantes relacionadas com parâmetros de segmentação, se fizer sentido.
-
-O QUE NÃO DEVE INCLUIR:
-- Implementação de funções.
-- Código de medição, classificação ou tracking.
-- Algoritmos genéricos que pertencem a vc.c.
-
-PORQUE EXISTE:
-Este ficheiro existe para permitir que o módulo seja usado de forma limpa e
-controlada a partir do main ou de outros módulos, sem expor detalhes internos
-da implementação.
-
-RELAÇÃO COM OS RESTANTES FICHEIROS:
-- Está associado a tp_segmentation.c.
-- Pode incluir vc.h para aceder à estrutura IVC.
-
-NOTAS:
-Sempre que forem criadas novas funções de segmentação reutilizáveis, os seus
-protótipos devem ser adicionados aqui.
+Declarar as funcoes usadas para converter cor e criar mascaras binarias.
 ===============================================================================
 */
+#ifndef TP_SEGMENTATION_H
+#define TP_SEGMENTATION_H
+
 #include "../include/tp_utils.h"
 
+/**
+ * @brief Converte uma imagem RGB para HSV.
+ *
+ * @param src Imagem de entrada em RGB.
+ * @param dst Imagem de saida em HSV.
+ * @return int 1 se a conversao for executada.
+ */
 int vc_rgb_to_hsv(IVC *src, IVC *dst);
+
+/**
+ * @brief Segmenta uma imagem HSV usando intervalos de matiz, saturacao e valor.
+ *
+ * @param src Imagem HSV de entrada.
+ * @param dst Mascara binaria de saida.
+ * @param hmin Valor minimo de hue em graus.
+ * @param hmax Valor maximo de hue em graus.
+ * @param smin Saturacao minima em percentagem.
+ * @param smax Saturacao maxima em percentagem.
+ * @param vmin Valor minimo em percentagem.
+ * @param vmax Valor maximo em percentagem.
+ * @return int 1 se a segmentacao for executada.
+ */
 int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax);
+
+/**
+ * @brief Ajusta os canais de saturacao e valor de uma imagem HSV.
+ *
+ * @param src Imagem HSV de entrada.
+ * @param dst Imagem HSV ajustada.
+ * @param satMod Fator multiplicativo para a saturacao.
+ * @param valMod Fator multiplicativo para o valor.
+ * @return int 1 se o ajuste for executado.
+ */
 int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);
+
+#endif
