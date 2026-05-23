@@ -96,12 +96,12 @@ int main(void)
         // 1. CONVERSÃO E SEGMENTAÇÃO
         vc_rgb_to_hsv(image, imageHSV);        
         vc_hsv_saturation_and_value_modified(imageHSV, imageHSVMod, 1, 255);
-        vc_hsv_segmentation(imageHSVMod, imageSEG, 10, 34, 30, 100, 0, 100);
+        vc_hsv_segmentation(imageHSVMod, imageSEG, 12, 34, 30, 100, 0, 100);
         
         memcpy(frameSeg.data, imageSEG->data, video.width * video.height);
 
         // 2. LIMPEZA OTIMIZADA - OpenCV
-        medianBlur(frameSeg, frameSeg, 5);
+        //medianBlur(frameSeg, frameSeg, 5);
         morphologyEx(frameSeg, frameSeg, MORPH_CLOSE, elementClose);
         morphologyEx(frameSeg, frameSeg, MORPH_OPEN, elementOpen);
 
