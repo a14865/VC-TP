@@ -31,7 +31,7 @@ extern "C"
  */
 int main(void)
 {
-    string videofile = "data/raw/video.avi";
+    string videofile = "../data/raw/video.avi";
     char key = 0;
 
     VideoCapture capture;
@@ -60,7 +60,6 @@ int main(void)
     string str;
 
     Mat frame;
-    Mat frameRGB;
     Mat frameSeg(video.height, video.width, CV_8UC1);
 
     IVC *image = vc_image_new(video.width, video.height, 3, 255);
@@ -96,10 +95,9 @@ int main(void)
         }
 
         video.nFrame = (int)capture.get(CAP_PROP_POS_FRAMES);
-        cvtColor(frame, frameRGB, COLOR_BGR2RGB);
-        memcpy(image->data, frameRGB.data, video.height * video.width * 3);
+        memcpy(image->data, frame.data, video.height * video.width * 3);
 
-        vc_rgb_to_hsv(image, imageHSV);
+        vc_bgr_to_hsv(image, imageHSV);
         vc_hsv_segmentation(imageHSV, imageSEG, 10, 34, 30, 100, 0, 100);
 
         memcpy(frameSeg.data, imageSEG->data, video.width * video.height);
@@ -198,8 +196,8 @@ int main(void)
 
                 if (blobs[i].yc > linhaAtivacao && blobs[i].yc < linhaDesativacao)
                 {
-                    vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 0, 1, 255, 0, 0);
-                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 5, 3, 255, 0, 0);
+                    vc_draw_bounding_box_all_blobs(image, &blobs[i], 1, 0, 1, 0, 0, 255);
+                    vc_draw_center_mass_all_blobs(image, &blobs[i], 1, 5, 3, 0, 0, 255);
 
                     currentFrameOranges++;
                 }
@@ -215,8 +213,7 @@ int main(void)
             numberOrangesPreviousFrame = numberOrangesCurrentFrame;
         }
 
-        memcpy(frameRGB.data, image->data, video.width * video.height * 3);
-        cvtColor(frameRGB, frame, COLOR_RGB2BGR);
+        memcpy(frame.data, image->data, video.width * video.height * 3);
 
         for (int i = 0; i < numberOrangesCurrentFrame; i++)
         {

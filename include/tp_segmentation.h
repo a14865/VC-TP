@@ -21,7 +21,7 @@ Declarar as funcoes usadas para converter cor e criar mascaras binarias.
  * @param dst Imagem de saida em HSV.
  * @return int 1 se a conversao for executada.
  */
-int vc_rgb_to_hsv(IVC *src, IVC *dst);
+int vc_bgr_to_hsv(IVC *src, IVC *dst);
 
 /**
  * @brief Segmenta uma imagem HSV usando intervalos de matiz, saturacao e valor.

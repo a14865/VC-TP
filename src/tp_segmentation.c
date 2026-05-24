@@ -15,7 +15,7 @@ objetos que serao medidos e classificados.
 /**
  * @brief Converte cada pixel RGB para HSV usando os canais normalizados.
  */
-int vc_rgb_to_hsv(IVC *src, IVC *dst)
+int vc_bgr_to_hsv(IVC *src, IVC *dst)
 {
 	//Validação
 	valImages(src,dst);
@@ -26,9 +26,9 @@ int vc_rgb_to_hsv(IVC *src, IVC *dst)
 	for (int i = 0; i < lenght; i += channels)
 	{
 
-		float r = src->data[i] / 255.0f;
+		float b = src->data[i] / 255.0f;
 		float g = src->data[i + 1] / 255.0f;
-		float b = src->data[i + 2] / 255.0f;
+		float r = src->data[i + 2] / 255.0f;
 
 		float hue = 0;
 		float sat = 0;
