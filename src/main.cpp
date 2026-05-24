@@ -75,7 +75,7 @@ int main(void)
     int totalOranges = 0;
     int linhaAtivacao = 150;
     int alturaBarraInfo = 116;
-    int linhaDesativacao = video.height - linhaAtivacao - alturaBarraInfo;
+    int linhaDesativacao = video.height - linhaAtivacao;
 
     OVC *orangesPreviousFrame = (OVC *)malloc(sizeof(OVC) * MAX_LARANJAS_NO_FRAME);
     OrangeQualityMetrics orangesQualityPreviousFrame[MAX_LARANJAS_NO_FRAME];

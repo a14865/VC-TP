@@ -16,47 +16,72 @@ Desenhar elementos como bounding boxes e centros de massa sobre a imagem.
  *
  * A funcao usa centro, largura e altura do blob para desenhar os limites em RGB.
  */
-int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB)
-{
-	for(int i = 0; i < nlabels; i++)
-	{
-		int height = blobs[i].height;
-		int width = blobs[i].width;
-		int xc = blobs[i].xc;
-		int yc = blobs[i].yc;
+int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB){
 
-		for(int y = yc - (height / 2) - padding; y <= yc + (height / 2) + padding; y++)
-		{
-			for(int x = xc - (width / 2) - padding; x <= xc + (width / 2) + padding; x++)
-			{
-				int pos = y * srcdst->bytesperline + x * srcdst->channels;
+	if(!srcdst || !blobs) return 0;
 
-				if (x - padding < 0 || x + padding >= srcdst->width || y - padding < 0 || y + padding >= srcdst->height) continue;
+	for(int i = 0; i < nlabels; i++){
 
-				if(y == yc - (height / 2) - padding || y == yc + (height/2) + padding)
-				{
-					for(int j = 0; j < thickness; j++)
-					{
-						srcdst->data[pos + (j * srcdst->bytesperline)] = colorR;
-						srcdst->data[pos + 1 + (j * srcdst->bytesperline)] = colorG;
-						srcdst->data[pos + 2 + (j * srcdst->bytesperline)] = colorB;
+		int xMin = blobs[i].x - padding;
+		int yMin = blobs[i].y + padding;
+		int xMax = blobs[i].x + blobs[i].width + padding;
+		int yMax = blobs[i].y + blobs[i].height + padding;
+
+		for(int y = 0; y < thickness; y++){
+
+			int yTop = yMin + y;
+			int yBottom = yMax - y;
+
+			for(int x = xMin; x <= xMax; x++){
+
+				if (x >= 0 && x < srcdst->width){
+
+					if(yTop >= 0 && yTop < srcdst->height) {
+
+						int pos = yTop * srcdst->bytesperline + x * srcdst->channels;
+						srcdst->data[pos] = colorB;
+						srcdst->data[pos + 1] = colorG;
+						srcdst->data[pos + 2] = colorR;
 					}
-				}
 
-				if(x == xc - (width / 2) - padding || x == xc + (width / 2) + padding)
-				{
-					for(int j = 0, k = 0; j < thickness; j++, k += 3)
-					{
-						srcdst->data[pos + k] = colorR;
-						srcdst->data[pos + 1 + k] = colorG;
-						srcdst->data[pos + 2 + k] = colorB;
-					}
-				}
-			}
-		}
-	}
+					if (yBottom >= 0 && yBottom < srcdst->height) {
+                        int pos = yBottom * srcdst->bytesperline + x * srcdst->channels;
+                        srcdst->data[pos] = colorB;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorR;
+                    }
+				}				
+            }
+        }
 
-	return 1;
+        for (int x = 0; x < thickness; x++) {
+
+            int xLeft = xMin + x;
+            int xRight = xMax - x;
+
+            for (int y = yMin; y <= yMax; y++) {
+
+                if (y >= 0 && y < srcdst->height) {
+                
+                    if (xLeft >= 0 && xLeft < srcdst->width) {
+                        int pos = y * srcdst->bytesperline + xLeft * srcdst->channels;
+                        srcdst->data[pos] = colorB;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorR;
+                    }
+
+                    if (xRight >= 0 && xRight < srcdst->width) {
+                        int pos = y * srcdst->bytesperline + xRight * srcdst->channels;
+                        srcdst->data[pos] = colorB;
+                        srcdst->data[pos + 1] = colorG;
+                        srcdst->data[pos + 2] = colorR;
+                    }
+                }
+            }
+        }
+    }
+
+    return 1;
 }
 
 /**
@@ -84,9 +109,9 @@ int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kern
                 if((x < xc - thickOffset || x > xc + thickOffset) && (y < yc - thickOffset || y > yc + thickOffset)) continue;
                 int pos = y * srcdst->bytesperline + x * srcdst->channels;
 
-                srcdst->data[pos] = colorR;
+                srcdst->data[pos] = colorB;
 				srcdst->data[pos + 1] = colorG;
-				srcdst->data[pos + 2] = colorB;
+				srcdst->data[pos + 2] = colorR;
             }
         }
     }
