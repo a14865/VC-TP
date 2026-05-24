@@ -44,7 +44,7 @@ principal da solução final.
 #include <opencv2\videoio.hpp>
 
 extern "C" {
-//#include "vc.h"
+#include "../include/vc.h"
 }
 
 

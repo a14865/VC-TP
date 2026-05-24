@@ -59,7 +59,7 @@ deve preferencialmente estar aqui e não num módulo específico do TP.
 #include <ctype.h>
 #include <string.h>
 #include <malloc.h>
-#include "vc.h"
+#include "../include/vc.h"
 #include <math.h>
 #ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -192,6 +192,44 @@ long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, 
 	}
 
 	return counttotalbytes;
+}
+
+void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int width, int height)
+{
+	int x, y;
+	int countbits;
+	long int pos;
+	unsigned char *p = databit;
+
+	countbits = 1;
+
+	for(y=0; y<height; y++)
+	{
+		for(x=0; x<width; x++)
+		{
+			pos = width * y + x;
+
+			if(countbits <= 8)
+			{
+				// Numa imagem PBM:
+				// 1 = Preto
+				// 0 = Branco
+				//datauchar[pos] = (*p & (1 << (8 - countbits))) ? 1 : 0;
+
+				// Na nossa imagem:
+				// 1 = Branco
+				// 0 = Preto
+				datauchar[pos] = (*p & (1 << (8 - countbits))) ? 0 : 1;
+				
+				countbits++;
+			}
+			if((countbits > 8) || (x == width - 1))
+			{
+				p++;
+				countbits = 1;
+			}
+		}
+	}
 }
 
 IVC *vc_read_image(char *filename)
@@ -1159,14 +1197,14 @@ int vc_hsv_segmentation_ze(IVC *src, IVC *dst, int hmin, int hmax, int smin, int
 		if (hue_ok && sv_ok)
 		{
 			datadst[i] = 255; //datasrc[i];
-			//datadst[i + 1] = 255; //datasrc[i + 1];
-			//datadst[i + 2] = 255; //datasrc[i + 2];
+			datadst[i + 1] = 255; //datasrc[i + 1];
+			datadst[i + 2] = 255; //datasrc[i + 2];
 		}
 		else
 		{
 			datadst[i] = 0;
-			//datadst[i + 1] = 0;
-			// datadst[i + 2] = 0;
+			datadst[i + 1] = 0;
+			datadst[i + 2] = 0;
 		}
 	}
 
@@ -2135,8 +2173,6 @@ int vc_binary_erode_raul(IVC *src, IVC *dst, int kernel) {
 
 	offset = (kernel - 1) / 2;
 
-	printf("%d", offset);
-
 	for (int x = 0; x < width; x++) {
 		
 		for (int y = 0; y < height; y++) {
@@ -2227,8 +2263,8 @@ int vc_image_open_ricardo(IVC *src, IVC *dst, int kernelErode, int kernelDilate)
 	if(src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1) return 0;
 
 	IVC* img = vc_image_new(src->width, src->height, src->channels, src->levels);
-	vc_binary_erode(src, img, kernelErode);
-	vc_binary_dilate(img, dst, kernelDilate);
+	vc_binary_erode_ricardo(src, img, kernelErode);
+	vc_binary_dilate_ricardo(img, dst, kernelDilate);
 
 	vc_image_free(img);
 
@@ -2240,8 +2276,8 @@ int vc_image_close_ricardo(IVC *src, IVC *dst, int kernelDilate, int kernelErode
 	if(src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1) return 0;
 
 	IVC* img = vc_image_new(src->width, src->height, src->channels, src->levels);
-	vc_binary_dilate(src, img, kernelDilate);
-	vc_binary_erode(img, dst, kernelErode);
+	vc_binary_dilate_ricardo(src, img, kernelDilate);
+	vc_binary_erode_ricardo(img, dst, kernelErode);
 
 	vc_image_free(img);
 
@@ -3264,73 +3300,73 @@ int vc_gray_histogram_show_ricardo(IVC *src, IVC *dst){
 	return 1;
 }
 
-int vc_gray_histogram_show_ze(IVC * src, IVC *dst)
-{
-	#define length 256
-	unsigned char *datasrc = (unsigned char *)src->data;
-	unsigned char *datadst = (unsigned char *)dst->data;
-	int height = src->height;
-	int width = src->width;
-	int bytesperline = src->bytesperline;
-	int channels = src->channels;
-	int hist[length] = {0};
-	int pos;
-	int max = 0;
-	int size = dst->height * dst->width * dst->channels;
-	int numPixeis;
+// int vc_gray_histogram_show_ze(IVC * src, IVC *dst)
+// {
+// 	#define length 256
+// 	unsigned char *datasrc = (unsigned char *)src->data;
+// 	unsigned char *datadst = (unsigned char *)dst->data;
+// 	int height = src->height;
+// 	int width = src->width;
+// 	int bytesperline = src->bytesperline;
+// 	int channels = src->channels;
+// 	int hist[length] = {0};
+// 	int pos;
+// 	int max = 0;
+// 	int size = dst->height * dst->width * dst->channels;
+// 	int numPixeis;
 
-	//Preencher a imagem de destino com todos os pixeis a zero
-	for(int i = 0; i < size; i++)
-	{
-		dst->data[i] = 0;
-	}
+// 	//Preencher a imagem de destino com todos os pixeis a zero
+// 	for(int i = 0; i < size; i++)
+// 	{
+// 		dst->data[i] = 0;
+// 	}
 
-	//Guardar número de pixeis no array
-	for(int x = 0; x < width; x++)
-	{
-		for(int y = 0; y < height; y++)
-		{
-			pos = (y * bytesperline) + (x * channels);
+// 	//Guardar número de pixeis no array
+// 	for(int x = 0; x < width; x++)
+// 	{
+// 		for(int y = 0; y < height; y++)
+// 		{
+// 			pos = (y * bytesperline) + (x * channels);
 			
-			hist[datasrc[pos]]++;
-		}
-	}
+// 			hist[datasrc[pos]]++;
+// 		}
+// 	}
 
-	//Debug
-	// for(int z = 0; z < length; z++)
-	// {
-	// 	printf("%d\n", hist[z]);
-	// }
+// 	//Debug
+// 	// for(int z = 0; z < length; z++)
+// 	// {
+// 	// 	printf("%d\n", hist[z]);
+// 	// }
 
-	//Ciclo para encontrar máximo
-	for(int m = 0; m < length; m++)
-	{		
-		if(hist[m] > max) max = hist[m]; 		
-	}
+// 	//Ciclo para encontrar máximo
+// 	for(int m = 0; m < length; m++)
+// 	{		
+// 		if(hist[m] > max) max = hist[m]; 		
+// 	}
 
-	// printf("%d", max);
+// 	// printf("%d", max);
 
-	//Ciclo para escrever os pixeis brancos na imagem de destino
-	//Percorrer o array hist[]
-	for(int posArr = 0; posArr <= length - 1; posArr++)
-	{
-		//Validar se a posição do array é diferente de 0
-		if(hist[posArr] != 0)
-		{
-			//Transformar o numero de pixeis na escala de 256
-			numPixeis = (hist[posArr] * dst->height) / max;
+// 	//Ciclo para escrever os pixeis brancos na imagem de destino
+// 	//Percorrer o array hist[]
+// 	for(int posArr = 0; posArr <= length - 1; posArr++)
+// 	{
+// 		//Validar se a posição do array é diferente de 0
+// 		if(hist[posArr] != 0)
+// 		{
+// 			//Transformar o numero de pixeis na escala de 256
+// 			numPixeis = (hist[posArr] * dst->height) / max;
 
-			int xDst = posArr;
-			for(int yDst = dst->height - 1; yDst >= dst->height - numPixeis; yDst--)
-			{
-				int posDst = yDst * bytesperline + xDst * channels;
-				dst->data[posDst] = 255;
-			}
-		}		
-	}	
+// 			int xDst = posArr;
+// 			for(int yDst = dst->height - 1; yDst >= dst->height - numPixeis; yDst--)
+// 			{
+// 				int posDst = yDst * bytesperline + xDst * channels;
+// 				dst->data[posDst] = 255;
+// 			}
+// 		}		
+// 	}	
 
-	return 1;
-}
+// 	return 1;
+// }
 
 
 //Função que realize a equalização de imagens em tons de cinzento.
@@ -3829,7 +3865,7 @@ int vc_gray_lowpass_median_filter_raul(IVC *src, IVC *dst, int kernelsize) {
 		for (int y = 0; y < height; y++) {
 			pos = y * bytesperline + x * channels;
 
-			int values[kernelsize * kernelsize];
+			int *values = (int*)malloc(sizeof(int));
 			int count = 0;
 
 			for(int ix = -offset; ix <= offset; ix++){
@@ -3875,7 +3911,7 @@ int vc_gray_lowpass_median_filter_ze(IVC *src, IVC *dst, int kernelsize) {
 		for (int y = 0; y < height; y++) {
 			pos = y * bytesperline + x * channels;
 
-			int values[kernelsize * kernelsize];
+			int *values = (int*)malloc(sizeof(int));
 			int count = 0;
 
 			for(int ix = -offset; ix <= offset; ix++){
@@ -4023,252 +4059,1764 @@ int vc_gray_lowpass_gaussian_ze(IVC *src, IVC *dst)
 
 
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//    FUNÇÕES: EXTRAS
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Ricardo-----------------------------------------------------------------------------
-int segmentar_cerebro_preto(IVC *src, IVC *dst, int *total)
-{
-    IVC *hsv = NULL;
-    int x, y;
-    long int pos_src, pos_dst, pos_hsv;
-    int S, V;
-    int count = 0;
+// //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// //    FUNÇÕES: EXTRAS
+// //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// //Ricardo-----------------------------------------------------------------------------
+// int segmentar_cerebro_preto(IVC *src, IVC *dst, int *total)
+// {
+//     IVC *hsv = NULL;
+//     int x, y;
+//     long int pos_src, pos_dst, pos_hsv;
+//     int S, V;
+//     int count = 0;
 
-    if(src == NULL || dst == NULL || total == NULL) return 0;
-    if(src->width != dst->width || src->height != dst->height) return 0;
-    if(src->channels != 3 || dst->channels != 3) return 0;
+//     if(src == NULL || dst == NULL || total == NULL) return 0;
+//     if(src->width != dst->width || src->height != dst->height) return 0;
+//     if(src->channels != 3 || dst->channels != 3) return 0;
 
-    hsv = vc_image_new(src->width, src->height, 3, 255);
-    if(hsv == NULL) return 0;
+//     hsv = vc_image_new(src->width, src->height, 3, 255);
+//     if(hsv == NULL) return 0;
 
-    if(vc_rgb_to_hsv(src, hsv) == 0)
-    {
-        vc_image_free(hsv);
-        return 0;
-    }
+//     if(vc_rgb_to_hsv(src, hsv) == 0)
+//     {
+//         vc_image_free(hsv);
+//         return 0;
+//     }
 
-    for(y = 0; y < src->height; y++)
-    {
-        for(x = 0; x < src->width; x++)
-        {
-            pos_src = y * src->bytesperline + x * src->channels;
-            pos_dst = y * dst->bytesperline + x * dst->channels;
-            pos_hsv = y * hsv->bytesperline + x * hsv->channels;
+//     for(y = 0; y < src->height; y++)
+//     {
+//         for(x = 0; x < src->width; x++)
+//         {
+//             pos_src = y * src->bytesperline + x * src->channels;
+//             pos_dst = y * dst->bytesperline + x * dst->channels;
+//             pos_hsv = y * hsv->bytesperline + x * hsv->channels;
 
-            S = hsv->data[pos_hsv + 1];
-            V = hsv->data[pos_hsv + 2];
+//             S = hsv->data[pos_hsv + 1];
+//             V = hsv->data[pos_hsv + 2];
 
-            /* Fundo preto: S entre 0 e 50% e V entre 0 e 30% */
-            if(S <= 127 && V <= 76)
-            {
-                dst->data[pos_dst]     = 255;
-                dst->data[pos_dst + 1] = 255;
-                dst->data[pos_dst + 2] = 0;
-            }
-            else
-            {
-                /* Cérebro */
-                dst->data[pos_dst]     = 0;
-                dst->data[pos_dst + 1] = 0;
-                dst->data[pos_dst + 2] = 0;
-                count++;
-            }
-        }
-    }
+//             /* Fundo preto: S entre 0 e 50% e V entre 0 e 30% */
+//             if(S <= 127 && V <= 76)
+//             {
+//                 dst->data[pos_dst]     = 255;
+//                 dst->data[pos_dst + 1] = 255;
+//                 dst->data[pos_dst + 2] = 0;
+//             }
+//             else
+//             {
+//                 /* Cérebro */
+//                 dst->data[pos_dst]     = 0;
+//                 dst->data[pos_dst + 1] = 0;
+//                 dst->data[pos_dst + 2] = 0;
+//                 count++;
+//             }
+//         }
+//     }
 
-    *total = count;
+//     *total = count;
 
-    vc_image_free(hsv);
-    return 1;
-}
+//     vc_image_free(hsv);
+//     return 1;
+// }
 
-int analisar_pet(IVC *src, IVC *seg, int total_cerebro)
-{
-    IVC *hsv = NULL;
-    int x, y;
-    long int pos_seg, pos_hsv;
-    int vermelho = 0, amarelo = 0, verde = 0, azul = 0;
-    int H, S, V;
-    int rs, gs, bs;
+// int analisar_pet(IVC *src, IVC *seg, int total_cerebro)
+// {
+//     IVC *hsv = NULL;
+//     int x, y;
+//     long int pos_seg, pos_hsv;
+//     int vermelho = 0, amarelo = 0, verde = 0, azul = 0;
+//     int H, S, V;
+//     int rs, gs, bs;
 
-    if(src == NULL || seg == NULL) return 0;
-    if(src->channels != 3 || seg->channels != 3) return 0;
-    if(src->width != seg->width || src->height != seg->height) return 0;
-    if(total_cerebro <= 0) return 0;
+//     if(src == NULL || seg == NULL) return 0;
+//     if(src->channels != 3 || seg->channels != 3) return 0;
+//     if(src->width != seg->width || src->height != seg->height) return 0;
+//     if(total_cerebro <= 0) return 0;
 
-    hsv = vc_image_new(src->width, src->height, 3, 255);
-    if(hsv == NULL) return 0;
+//     hsv = vc_image_new(src->width, src->height, 3, 255);
+//     if(hsv == NULL) return 0;
 
-    if(vc_rgb_to_hsv(src, hsv) == 0)
-    {
-        vc_image_free(hsv);
-        return 0;
-    }
+//     if(vc_rgb_to_hsv(src, hsv) == 0)
+//     {
+//         vc_image_free(hsv);
+//         return 0;
+//     }
 
-    for(y = 0; y < src->height; y++)
-    {
-        for(x = 0; x < src->width; x++)
-        {
-            pos_seg = y * seg->bytesperline + x * seg->channels;
-            pos_hsv = y * hsv->bytesperline + x * hsv->channels;
+//     for(y = 0; y < src->height; y++)
+//     {
+//         for(x = 0; x < src->width; x++)
+//         {
+//             pos_seg = y * seg->bytesperline + x * seg->channels;
+//             pos_hsv = y * hsv->bytesperline + x * hsv->channels;
 
-            rs = seg->data[pos_seg];
-            gs = seg->data[pos_seg + 1];
-            bs = seg->data[pos_seg + 2];
+//             rs = seg->data[pos_seg];
+//             gs = seg->data[pos_seg + 1];
+//             bs = seg->data[pos_seg + 2];
 
-            /* Só contar píxeis do cérebro */
-            if(!(rs == 0 && gs == 0 && bs == 0))
-                continue;
+//             /* Só contar píxeis do cérebro */
+//             if(!(rs == 0 && gs == 0 && bs == 0))
+//                 continue;
 
-            H = hsv->data[pos_hsv];
-            S = hsv->data[pos_hsv + 1];
-            V = hsv->data[pos_hsv + 2];
+//             H = hsv->data[pos_hsv];
+//             S = hsv->data[pos_hsv + 1];
+//             V = hsv->data[pos_hsv + 2];
 
-            /* Só analisar pixels com cor forte */
-            if(S < 127 || V < 127)
-                continue;
+//             /* Só analisar pixels com cor forte */
+//             if(S < 127 || V < 127)
+//                 continue;
 
-            /* Vermelho: 0-45 ou 291-360 */
-            if((H >= 0 && H <= 32) || (H >= 206 && H <= 255))
-            {
-                vermelho++;
-            }
-            /* Amarelo: 46-70 */
-            else if(H >= 33 && H <= 50)
-            {
-                amarelo++;
-            }
-            /* Verde: 71-160 */
-            else if(H >= 51 && H <= 113)
-            {
-                verde++;
-            }
-        }
-    }
+//             /* Vermelho: 0-45 ou 291-360 */
+//             if((H >= 0 && H <= 32) || (H >= 206 && H <= 255))
+//             {
+//                 vermelho++;
+//             }
+//             /* Amarelo: 46-70 */
+//             else if(H >= 33 && H <= 50)
+//             {
+//                 amarelo++;
+//             }
+//             /* Verde: 71-160 */
+//             else if(H >= 51 && H <= 113)
+//             {
+//                 verde++;
+//             }
+//         }
+//     }
 
-    /* Azul = resto */
-    azul = total_cerebro - vermelho - amarelo - verde;
+//     /* Azul = resto */
+//     azul = total_cerebro - vermelho - amarelo - verde;
 
-    printf("Numero de pixeis vermelhos: %d\n", vermelho);
-    printf("Numero de pixeis amarelos: %d\n", amarelo);
-    printf("Numero de pixeis verdes: %d\n", verde);
-    printf("Numero de pixeis azuis: %d\n", azul);
-    printf("Numero de pixeis do cerebro: %d\n", total_cerebro);
+//     printf("Numero de pixeis vermelhos: %d\n", vermelho);
+//     printf("Numero de pixeis amarelos: %d\n", amarelo);
+//     printf("Numero de pixeis verdes: %d\n", verde);
+//     printf("Numero de pixeis azuis: %d\n", azul);
+//     printf("Numero de pixeis do cerebro: %d\n", total_cerebro);
 
-    printf("0 a 25%%   : %.2f%%\n", (azul * 100.0) / total_cerebro);
-    printf("26 a 50%%  : %.2f%%\n", (verde * 100.0) / total_cerebro);
-    printf("51 a 75%%  : %.2f%%\n", (amarelo * 100.0) / total_cerebro);
-    printf("76 a 100%% : %.2f%%\n", (vermelho * 100.0) / total_cerebro);
+//     printf("0 a 25%%   : %.2f%%\n", (azul * 100.0) / total_cerebro);
+//     printf("26 a 50%%  : %.2f%%\n", (verde * 100.0) / total_cerebro);
+//     printf("51 a 75%%  : %.2f%%\n", (amarelo * 100.0) / total_cerebro);
+//     printf("76 a 100%% : %.2f%%\n", (vermelho * 100.0) / total_cerebro);
 
-    vc_image_free(hsv);
-    return 1;
-}
+//     vc_image_free(hsv);
+//     return 1;
+// }
 
-//Função para calcular a diferença entre duas imagens binárias (usada para operações morfológicas)
-int vc_binary_difference(IVC *src1, IVC *src2, IVC *dst)
-{
-    unsigned char *data1, *data2, *datadst;
-    int i;
-    int pos1, pos2, pos_dst;
+// //Função para calcular a diferença entre duas imagens binárias (usada para operações morfológicas)
+// /*int vc_binary_difference(IVC *src1, IVC *src2, IVC *dst)
+// {
+//     unsigned char *data1, *data2, *datadst;
+//     int i;
+//     int pos1, pos2, pos_dst;
 
-    if(src1 == NULL || src2 == NULL || dst == NULL) return 0;
-    if(src1->data == NULL || src2->data == NULL || dst->data == NULL) return 0;
-    if(src1->width != src2->width || src1->height != src2->height ||
-       src1->width != dst->width || src1->height != dst->height) return 0;
-    if(src1->channels != 1 || src2->channels != 1 || dst->channels != 1) return 0;
+//     if(src1 == NULL || src2 == NULL || dst == NULL) return 0;
+//     if(src1->data == NULL || src2->data == NULL || dst->data == NULL) return 0;
+//     if(src1->width != src2->width || src1->height != src2->height ||
+//        src1->width != dst->width || src1->height != dst->height) return 0;
+//     if(src1->channels != 1 || src2->channels != 1 || dst->channels != 1) return 0;
 
-    data1 = (unsigned char *)src1->data;
-    data2 = (unsigned char *)src2->data;
-    datadst = (unsigned char *)dst->data;
+//     data1 = (unsigned char *)src1->data;
+//     data2 = (unsigned char *)src2->data;
+//     datadst = (unsigned char *)dst->data;
 
-    int length = dst->height * dst->width * dst->channels;
+//     int length = dst->height * dst->width * dst->channels;
 
-    for (i = 0; i < length; i++)
-    {
-        datadst[i] = (data1[i] == 255 && data2[i] == 0) ? 255 : 0;
-    }
-    return 1;
-}
+//     for (i = 0; i < length; i++)
+//     {
+//         datadst[i] = (data1[i] == 255 && data2[i] == 0) ? 255 : 0;
+//     }
+//     return 1;
+// }*/
 
-int vc_erode_minus_dilate(IVC* srcEroded, IVC* srcDilated, IVC* dst){
+// int vc_erode_minus_dilate(IVC* srcEroded, IVC* srcDilated, IVC* dst){
 
-	int length = dst->height * dst->width * dst->channels;
+// 	int length = dst->height * dst->width * dst->channels;
 
-	for(int i = 0; i < length; i++){
+// 	for(int i = 0; i < length; i++){
 
-		dst->data[i] = srcEroded->data[i] - srcDilated->data[i];
+// 		dst->data[i] = srcEroded->data[i] - srcDilated->data[i];
+// 	}
+
+// 	return 1;
+// }
+
+// //Função que verifica da mask for branco, mantém o pixel original, caso contrário, torna preto (usada para operações morfológicas)
+// int vc_apply_mask(IVC* src, IVC* mask, IVC* dst){
+
+//     unsigned char* data_src = (unsigned char*)src->data;
+//     unsigned char* data_mask = (unsigned char*)mask->data;
+//     unsigned char* data_dst = (unsigned char*)dst->data;
+
+//     int length = dst->height * dst->width * dst->channels;
+
+//     for(int i = 0; i < length; i++){
+//         dst->data[i]=0;
+//         data_dst[i] = (data_mask[i]==255) ? data_src[i] : 0;
+//     }
+
+//     return 1;
+// }
+
+
+
+// //Raul--------------------------------------------------------------------------------
+// // Não completo
+// int vc_binary_dilate_gray(IVC *src, IVC *dst, int kernel) {
+// 	unsigned char *datasrc = (unsigned char *)src->data;
+// 	unsigned char *datadst = (unsigned char *)dst->data;
+// 	int height = src->height;
+// 	int width = src->width;
+// 	int bytesperline = src->bytesperline;
+// 	int channels = src->channels;
+// 	int offset = 0;
+// 	long int pos = 0;
+// 	long int posOffset = 0;
+
+// 	// Check if the kernel is valid
+// 	if (kernel % 2 == 0 || kernel <= 0) {
+// 		printf("ERROR -> The kernel needs to be a positive odd number!\n");
+//         getchar();
+//         return 0;
+// 	}
+
+// 	offset = (kernel - 1) / 2;
+
+// 	printf("%d", offset);
+
+// 	for (int x = 0; x < width; x++) {
+		
+// 		for (int y = 0; y < height; y++) {
+// 			pos = y * bytesperline + x * channels;
+
+// 			dst->data[pos] = src->data[pos];
+			
+// 			for (int ix = -offset; ix <= offset; ix++) {
+// 				for (int iy = -offset; iy <= offset; iy++) {
+// 					if((x + ix) >= src->width || (y + iy) >= src->height || (x + ix) < 0 || (y + iy) < 0) continue;
+					
+// 					posOffset = (y + iy) * bytesperline + (x + ix) * channels;
+
+// 					if(src->data[posOffset] == 255) {
+// 						dst->data[pos] = 255;
+// 						dst->data[pos + 1] = 255;
+// 						dst->data[pos + 2] = 255;
+// 						break;
+// 					}
+// 				}
+				
+// 				if(dst->data[pos] == 255) {
+// 					break;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return 1;
+// }
+
+int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod){
+
+	int length = src->width * src->height * src->channels;
+
+	for(int i = 0; i < length; i += src->channels){
+
+		int s = (int)(src->data[i+1] * satMod);
+		int v = (int)(src->data[i+2] * valMod);
+
+		dst->data[i] = src->data[i];
+		dst->data[i+1] = s > 255 ? 255 : s < 0 ? 0 : s;
+		dst->data[i+2] = v > 255 ? 255 : v < 0 ? 0 : v;
 	}
 
 	return 1;
 }
 
-//Função que verifica da mask for branco, mantém o pixel original, caso contrário, torna preto (usada para operações morfológicas)
-int vc_apply_mask(IVC* src, IVC* mask, IVC* dst){
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//    FUNÇÕES: OPERAÇÕES COM ESPAÇOS DE COR
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    unsigned char* data_src = (unsigned char*)src->data;
-    unsigned char* data_mask = (unsigned char*)mask->data;
-    unsigned char* data_dst = (unsigned char*)dst->data;
 
-    int length = dst->height * dst->width * dst->channels;
+int vc_gray_negative_nuno(IVC *srcdst)
+{
 
-    for(int i = 0; i < length; i++){
-        dst->data[i]=0;
-        data_dst[i] = (data_mask[i]==255) ? data_src[i] : 0;
-    }
+	int x, y, pos;
 
-    return 1;
+	for (x = 0; x < srcdst->width; x++)
+	{
+
+		for (y = 0; y < srcdst->height; y++)
+		{
+
+			pos = y * srcdst->bytesperline + x * srcdst->channels;
+
+			srcdst->data[pos] = 255 - srcdst->data[pos];
+		}
+	}
+
+	return 1;
+}
+
+int vc_rgb_negative_nuno(IVC *srcdst)
+{
+
+	int x, y, pos;
+
+	for (x = 0; x < srcdst->width; x++)
+	{
+
+		for (y = 0; y < srcdst->height; y++)
+		{
+
+			pos = y * srcdst->bytesperline + x * srcdst->channels;
+
+			srcdst->data[pos] = 255 - srcdst->data[pos];
+			srcdst->data[pos + 1] = 255 - srcdst->data[pos + 1];
+			srcdst->data[pos + 2] = 255 - srcdst->data[pos + 2];
+		}
+	}
+
+	return 1;
+}
+
+int vc_rgb_get_red_gray_nuno(IVC *srcdst)
+{
+
+	int lenght = srcdst->height * srcdst->width * srcdst->channels;
+
+	for (int i = 0; i < lenght; i += 3)
+	{
+
+		srcdst->data[i + 1] = srcdst->data[i];
+		srcdst->data[i + 2] = srcdst->data[i];
+	}
+
+	return 1;
+}
+
+int vc_rgb_get_green_gray_nuno(IVC *srcdst)
+{
+
+	int lenght = srcdst->height * srcdst->width * srcdst->channels;
+
+	for (int i = 0; i < lenght; i += 3)
+	{
+
+		srcdst->data[i] = srcdst->data[i + 1];
+		srcdst->data[i + 2] = srcdst->data[i + 1];
+	}
+
+	return 1;
+}
+
+int vc_rgb_get_blue_gray_nuno(IVC *srcdst)
+{
+
+	int lenght = srcdst->height * srcdst->width * srcdst->channels;
+
+	for (int i = 0; i < lenght; i += 3)
+	{
+
+		srcdst->data[i] = srcdst->data[i + 2];
+		srcdst->data[i + 1] = srcdst->data[i + 2];
+	}
+
+	return 1;
+}
+
+int vc_rgb_to_gray(IVC *src, IVC *dst)
+{
+
+	int lenght = src->height * src->width * src->channels;
+
+	for (int i = 0, j = 0; i < lenght; i += 3, j++)
+	{
+
+		dst->data[j] = src->data[i] * 0.299 + src->data[i + 1] * 0.587 + src->data[i + 2] * 0.114;
+	}
+
+	return 1;
+}
+
+int vc_rgb_to_hsv(IVC *src, IVC *dst)
+{
+
+	int lenght = src->height * src->width * src->channels;
+	int channels = src->channels;
+
+	for (int i = 0; i < lenght; i += channels)
+	{
+
+		float r = src->data[i] / 255.0f;
+		float g = src->data[i + 1] / 255.0f;
+		float b = src->data[i + 2] / 255.0f;
+
+		float hue = 0;
+		float sat = 0;
+		float val = 0;
+
+		// Find Value
+		float max = r > g ? (r > b ? r : b) : (g > b ? g : b);
+
+		val = max;
+		if (val == 0)
+		{
+
+			dst->data[i] = 0;
+			dst->data[i + 1] = 0;
+			dst->data[i + 2] = 0;
+			continue;
+		}
+
+		// Find Saturation
+		float min = r < g ? (r < b ? r : b) : (g < b ? g : b);
+
+		if (max == min)
+		{
+
+			dst->data[i] = 0;
+			dst->data[i + 1] = 0;
+			dst->data[i + 2] = (int)(val * 255);
+			continue;
+		}
+
+		sat = (max - min) / max;
+
+		// Find Hue
+		if (max == r && g >= b)
+		{
+			hue = 60 * (g - b) / (max - min);
+		}
+		else if (max == r && g < b)
+		{
+			hue = 360 + 60 * (g - b) / (max - min);
+		}
+		else if (max == g)
+		{
+			hue = 120 + 60 * (b - r) / (max - min);
+		}
+		else if (max == b)
+		{
+			hue = 240 + 60 * (r - g) / (max - min);
+		}
+
+		dst->data[i] = (int)((hue / 360.0f) * 255.0f);
+		dst->data[i + 1] = (int)(sat * 255.0f);
+		dst->data[i + 2] = (int)(val * 255.0f);
+	}
+
+	return 1;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//    FUNÇÕES: MANIPULAÇÃO DE IMAGEM
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Destino 1 canal
+int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax)
+{
+
+	hmin = ((((hmin % 360) + 360) % 360) * 255) / 360;
+	hmax = ((((hmax % 360) + 360) % 360) * 255) / 360;
+	smin = (smin * 255) / 100;
+	smax = (smax * 255) / 100;
+	vmin = (vmin * 255) / 100;
+	vmax = (vmax * 255) / 100;
+
+	int length = src->channels * src->width * src->height;
+
+	for (int i = 0, j = 0; i < length; i += src->channels, j++)
+	{
+
+		if (hmax >= hmin && src->data[i] >= hmin && src->data[i] <= hmax && src->data[i + 1] >= smin && src->data[i + 1] <= smax && src->data[i + 2] >= vmin && src->data[i + 2] <= vmax)
+		{
+
+			dst->data[j] = 255;
+		}
+
+		else if (hmax < hmin && (src->data[i] >= hmin || src->data[i] <= hmax) && src->data[i + 1] >= smin && src->data[i + 1] <= smax && src->data[i + 2] >= vmin && src->data[i + 2] <= vmax)
+		{
+
+			dst->data[j] = 255;
+		}
+
+		else
+		{
+
+			dst->data[j] = 0;
+		}
+	}
+
+	return 1;
 }
 
 
-
-//Raul--------------------------------------------------------------------------------
-// Não completo
-int vc_binary_dilate_gray(IVC *src, IVC *dst, int kernel) {
+int vc_rgb_to_hsv_2(IVC *src, IVC *dst)
+{
 	unsigned char *datasrc = (unsigned char *)src->data;
 	unsigned char *datadst = (unsigned char *)dst->data;
-	int height = src->height;
 	int width = src->width;
+	int height = src->height;
 	int bytesperline = src->bytesperline;
 	int channels = src->channels;
-	int offset = 0;
-	long int pos = 0;
-	long int posOffset = 0;
+	float r, g, b, hue, saturation, value;
+	float rgb_max, rgb_min;
+	int i, size;
 
-	// Check if the kernel is valid
-	if (kernel % 2 == 0 || kernel <= 0) {
-		printf("ERROR -> The kernel needs to be a positive odd number!\n");
-        getchar();
-        return 0;
+	// Verificação de erros
+	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
+		return 0;
+	if ((src->width != dst->width) || (src->height != dst->height) || (src->channels != dst->channels))
+		return 0;
+	if (channels != 3)
+		return 0;
+
+	size = width * height * channels;
+
+	for (i = 0; i < size; i = i + channels)
+	{
+		r = (float)datasrc[i];
+		g = (float)datasrc[i + 1];
+		b = (float)datasrc[i + 2];
+
+		// Calcula valores m ximo e m nimo dos canais de cor R, G e B
+		rgb_max = (float)(r > g ? (r > b ? r : b) : (g > b ? g : b));
+		rgb_min = (float)(r < g ? (r < b ? r : b) : (g < b ? g : b));
+
+		// Value toma valores entre [0,255]
+		value = rgb_max;
+		if (value == 0.0)
+		{
+			hue = 0.0;
+			saturation = 0.0;
+		}
+		else
+		{
+			// Saturation toma valores entre [0,255]
+			saturation = ((rgb_max - rgb_min) / rgb_max) * (float)255.0;
+
+			if (saturation == 0.0)
+			{
+				hue = 0.0;
+			}
+			else
+			{
+				// R, G e B tomam valores entre [0,1]
+				r /= 255.0;
+				g /= 255.0;
+				b /= 255.0;
+
+				// Calcula valores m ximo e m nimo dos canais de cor R, G e B (tomam valores entre [0,1])
+				rgb_max = (r > g ? (r > b ? r : b) : (g > b ? g : b));
+				rgb_min = (r < g ? (r < b ? r : b) : (g < b ? g : b));
+
+				// Hue toma valores entre [0,360]
+				if ((rgb_max == r) && (g >= b))
+				{
+					hue = 60 * (g - b) / (rgb_max - rgb_min);
+				}
+				else if ((rgb_max == r) && (b > g))
+				{
+					hue = 360 + 60 * (g - b) / (rgb_max - rgb_min);
+				}
+				else if (rgb_max == g)
+				{
+					hue = 120 + 60 * (b - r) / (rgb_max - rgb_min);
+				}
+				else /* rgb_max == b*/
+				{
+					hue = 240 + 60 * (r - g) / (rgb_max - rgb_min);
+				}
+			}
+		}
+
+		// Atribui valores entre [0,255]
+		datadst[i] = (unsigned char)(hue / 360.0 * 255.0);
+		datadst[i + 1] = (unsigned char)(saturation);
+		datadst[i + 2] = (unsigned char)(value);
 	}
 
-	offset = (kernel - 1) / 2;
+	return 1;
+}
 
-	printf("%d", offset);
 
-	for (int x = 0; x < width; x++) {
-		
-		for (int y = 0; y < height; y++) {
-			pos = y * bytesperline + x * channels;
+int vc_scale_gray_to_rgb(IVC *src, IVC *dst)
+{
 
-			dst->data[pos] = src->data[pos];
-			
-			for (int ix = -offset; ix <= offset; ix++) {
-				for (int iy = -offset; iy <= offset; iy++) {
-					if((x + ix) >= src->width || (y + iy) >= src->height || (x + ix) < 0 || (y + iy) < 0) continue;
-					
-					posOffset = (y + iy) * bytesperline + (x + ix) * channels;
+	int red[256], green[256], blue[256];
 
-					if(src->data[posOffset] == 255) {
-						dst->data[pos] = 255;
-						dst->data[pos + 1] = 255;
-						dst->data[pos + 2] = 255;
-						break;
+	for (int i = 0; i < 256; i++)
+	{
+
+		red[i] = i < 128 ? 0 : i < 192 ? (i - 128) * 4
+									   : 255;
+		green[i] = i < 64 ? i * 4 : i < 192 ? 255
+											: ((256 - i) * 4) - 1;
+		blue[i] = i < 64 ? 255 : i < 128 ? ((128 - i) * 4) - 1
+										 : 0;
+	}
+
+	for (int i = 0, j = 0; i < src->height * src->width * src->channels; i += src->channels, j += dst->channels)
+	{
+
+		dst->data[j] = red[src->data[i]];
+		dst->data[j + 1] = green[src->data[i]];
+		dst->data[j + 2] = blue[src->data[i]];
+	}
+
+	return 1;
+}
+
+
+int vc_number_total_black_pixels(IVC *src, int *p)
+{
+
+	int length = src->width * src->height * src->channels;
+	int count = 0;
+
+	for (int i = 0; i < length; i += src->channels)
+	{
+
+		if (src->data[i] == 0)
+		{
+
+			count++;
+		}
+	}
+
+	*p = count;
+
+	return 1;
+}
+
+
+int vc_number_total_white_pixels(IVC *src, int *p)
+{
+
+	int length = src->width * src->height * src->channels;
+	int count = 0;
+
+	for (int i = 0; i < length; i += src->channels)
+	{
+
+		if (src->data[i] == 255)
+		{
+
+			count++;
+		}
+	}
+
+	*p = count;
+
+	return 1;
+}
+
+
+/*int vc_verify_images(IVC* src1, IVC* src2, IVC* dst){
+
+	int length = src1->height * src1->width * src1->channels;
+
+	for(int i = 0; i < length; i++){
+
+		int dif = src1->data[i] - src2->data[i];
+		dst->data[i] = abs(dif);
+	}
+
+	return 1;
+}*/
+
+
+int vc_gray_to_binary(IVC *srcdst, int threshold)
+{
+
+	int length = srcdst->height * srcdst->width * srcdst->channels;
+	int channels = srcdst->channels;
+
+	for (int i = 0; i < length; i += channels)
+	{
+
+		srcdst->data[i] = srcdst->data[i] > threshold ? 255 : 0;
+	}
+
+	return 1;
+}
+
+
+int vc_gray_to_binary_global_mean(IVC *srcdst)
+{
+
+	int length = srcdst->height * srcdst->width * srcdst->channels;
+	int channels = srcdst->channels;
+	int somePixelsData = 0;
+
+	for (int i = 0; i < length; i += channels)
+	{
+
+		somePixelsData += srcdst->data[i];
+	}
+
+	vc_gray_to_binary(srcdst, somePixelsData / length);
+
+	return 1;
+}
+
+
+int vc_gray_to_binary_2thresholds(IVC *srcdst, int thresholdMin, int thresholdMax, int judge)
+{
+
+	if (thresholdMax != 0 && thresholdMax < thresholdMin)
+		return 0;
+
+	int length = srcdst->width * srcdst->height * srcdst->channels;
+	int channels = srcdst->channels;
+
+	if (!thresholdMax)
+	{
+
+		if (!judge)
+		{
+
+			for (int i = 0; i < length; i += channels)
+			{
+
+				srcdst->data[i] = srcdst->data[i] < thresholdMin ? 255 : 0;
+			}
+		}
+		else
+		{
+
+			for (int i = 0; i < length; i += channels)
+			{
+
+				srcdst->data[i] = srcdst->data[i] > thresholdMin ? 255 : 0;
+			}
+		}
+	}
+	else
+	{
+
+		if (!judge)
+		{
+
+			for (int i = 0; i < length; i += channels)
+			{
+
+				srcdst->data[i] = srcdst->data[i] > thresholdMin ? (srcdst->data[i] < thresholdMax ? 0 : 255) : 255;
+			}
+		}
+		else
+		{
+
+			for (int i = 0; i < length; i += channels)
+			{
+
+				srcdst->data[i] = srcdst->data[i] > thresholdMin ? (srcdst->data[i] < thresholdMax ? 255 : 0) : 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
+
+int vc_gray_to_binary_midpoint(IVC *src, IVC *dst, int kernel)
+{
+
+	int offset = (kernel - 1) / 2;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int width = src->width;
+	int heigth = src->height;
+
+	// Imagem
+	for (int y = 0; y < heigth; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			int vmin = src->data[pos];
+			int vmax = src->data[pos];
+
+			// Kernel
+			for (int yk = y - offset; yk <= y + offset; yk++)
+			{
+				for (int xk = x - offset; xk <= x + offset; xk++)
+				{
+
+					if (xk >= width || yk >= heigth || xk < 0 || yk < 0)
+						continue;
+
+					int posk = yk * bytesPerLine + xk * channels;
+
+					vmin = vmin < src->data[posk] ? vmin : src->data[posk];
+					vmax = vmax > src->data[posk] ? vmax : src->data[posk];
+				}
+			}
+
+			int threshold = (vmin + vmax) / 2;
+			dst->data[pos] = src->data[pos] > threshold ? 255 : 0;
+		}
+	}
+
+	return 1;
+}
+
+
+int vc_gray_to_binary_bernsen(IVC *src, IVC *dst, int kernel)
+{
+
+	int offset = (kernel - 1) / 2;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int width = src->width;
+	int heigth = src->height;
+	int cmin = 15;
+
+	// Imagem
+	for (int y = 0; y < heigth; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			int vmin = src->data[pos];
+			int vmax = src->data[pos];
+
+			// Kernel
+			for (int yk = y - offset; yk <= y + offset; yk++)
+			{
+				for (int xk = x - offset; xk <= x + offset; xk++)
+				{
+
+					if (xk >= width || yk >= heigth || xk < 0 || yk < 0)
+						continue;
+
+					int posk = yk * bytesPerLine + xk * channels;
+
+					vmin = vmin < src->data[posk] ? vmin : src->data[posk];
+					vmax = vmax > src->data[posk] ? vmax : src->data[posk];
+				}
+			}
+
+			int threshold = (vmax - vmin) < cmin ? src->levels / 2 : (vmin + vmax) / 2;
+			dst->data[pos] = src->data[pos] > threshold ? 255 : 0;
+		}
+	}
+
+	return 1;
+}
+
+
+int vc_gray_to_binary_niblack(IVC *src, IVC *dst, int kernel, float k)
+{
+
+	int offset = (kernel - 1) / 2;
+	int heigth = src->height;
+	int width = src->width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+
+	for (int y = 0; y < heigth; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			float sum = 0, sum2 = 0;
+			int n = 0;
+
+			for (int ky = y - offset; ky <= y + offset; ky++)
+			{
+				for (int kx = x - offset; kx <= x + offset; kx++)
+				{
+
+					if (ky < 0 || ky >= heigth || kx < 0 || kx >= width)
+						continue;
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					sum += src->data[kpos];
+					sum2 += (src->data[kpos] * src->data[kpos]);
+					n++;
+				}
+			}
+
+			float mean = sum / n;
+			float sd = sqrt((sum2 / n) - (mean * mean));
+			float threshold = mean + k * sd;
+
+			dst->data[pos] = src->data[pos] >= threshold ? 255 : 0;
+		}
+	}
+
+	return 0;
+}
+
+
+int vc_image_dilate(IVC *src, IVC *dst, int kernel)
+{
+
+	int offset = (kernel - 1) / 2;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int width = src->width;
+	int heigth = src->height;
+
+	for (int y = 0; y < heigth; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			int vmax = src->data[pos];
+
+			for (int ky = y - offset; ky <= y + offset; ky++)
+			{
+				for (int kx = x - offset; kx <= x + offset; kx++)
+				{
+
+					if (kx >= width || ky >= heigth || kx < 0 || ky < 0)
+						continue;
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					vmax = vmax < src->data[kpos] ? src->data[kpos] : vmax;
+				}
+			}
+
+			dst->data[pos] = vmax;
+		}
+	}
+
+	return 1;
+}
+
+
+int vc_image_erode(IVC *src, IVC *dst, int kernel)
+{
+
+	int offset = (kernel - 1) / 2;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int width = src->width;
+	int heigth = src->height;
+
+	for (int y = 0; y < heigth; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			int vmin = src->data[pos];
+
+			for (int ky = y - offset; ky <= y + offset; ky++)
+			{
+				for (int kx = x - offset; kx <= x + offset; kx++)
+				{
+
+					if (ky >= heigth || ky < 0 || kx >= width || kx < 0)
+						continue;
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					vmin = vmin > src->data[kpos] ? src->data[kpos] : vmin;
+				}
+			}
+
+			dst->data[pos] = vmin;
+		}
+	}
+
+	return 1;
+}
+
+
+int vc_image_open(IVC *src, IVC *dst, int kernelErode, int kernelDilate)
+{
+
+	if (src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1)
+		return 0;
+
+	IVC *img = vc_image_new(src->width, src->height, src->channels, src->levels);
+	vc_image_erode(src, img, kernelErode);
+	vc_image_dilate(img, dst, kernelDilate);
+
+	vc_image_free(img);
+
+	return 1;
+}
+
+
+int vc_image_close(IVC *src, IVC *dst, int kernelDilate, int kernelErode)
+{
+
+	if (src == NULL || dst == NULL || kernelErode < 1 || kernelDilate < 1)
+		return 0;
+
+	IVC *img = vc_image_new(src->width, src->height, src->channels, src->levels);
+	vc_image_dilate(src, img, kernelDilate);
+	vc_image_erode(img, dst, kernelErode);
+
+	vc_image_free(img);
+
+	return 1;
+}
+
+
+int vc_erode_minus_dilate(IVC *srcEroded, IVC *srcDilated, IVC *dst)
+{
+
+	int length = dst->height * dst->width * dst->channels;
+
+	for (int i = 0; i < length; i++)
+	{
+
+		if (srcDilated->data[i])
+		{
+			dst->data[i] = 0;
+			continue;
+		}
+
+		dst->data[i] = srcEroded->data[i];
+	}
+
+	return 1;
+}
+
+
+int vc_compare_after_morpho(IVC *srcOriginal, IVC *srcMorpho, IVC *dst)
+{
+
+	int length = dst->height * dst->width * dst->channels;
+
+	for (int i = 0; i < length; i++)
+	{
+
+		dst->data[i] = 0;
+
+		if (srcMorpho->data[i])
+		{
+
+			dst->data[i] = srcOriginal->data[i];
+		}
+	}
+
+	return 1;
+}
+
+
+// typeOfKernel = 2 -> custom
+// typeOfKernel = 1 -> fixed [NW, N, NE, W, X]
+int vc_binary_blob_labelling_mine(IVC *src, IVC *dst, int kernel, int typeOfKernel)
+{
+
+	int heigth = src->height;
+	int width = src->width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int offset = (kernel - 1) / 2;
+	int label = 1;
+	int length = width * heigth;
+
+	if (typeOfKernel == 2)
+	{
+
+		for (int y = 0; y < heigth; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+
+				int pos = y * bytesPerLine + x * channels;
+
+				if (src->data[pos])
+				{
+
+					int neighborLabel = length;
+
+					for (int ky = y - offset; ky <= y; ky++)
+					{
+						for (int kx = x - offset; kx <= x + offset; kx++)
+						{
+
+							if (ky == y && kx >= x)
+								continue;
+							if (kx < 0 || ky < 0 || kx >= width || ky >= heigth)
+								continue;
+
+							int kpos = ky * bytesPerLine + kx * channels;
+							if (!src->data[kpos])
+								continue;
+
+							neighborLabel = (dst->data[kpos] < neighborLabel && dst->data[kpos] != 0) ? dst->data[kpos] : neighborLabel;
+						}
+					}
+
+					dst->data[pos] = neighborLabel != length ? neighborLabel : label++;
+				}
+
+				else
+				{
+
+					dst->data[pos] = 0;
+				}
+			}
+		}
+	}
+
+	else if (typeOfKernel == 1)
+	{
+
+		for (int y = 0; y < heigth; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+
+				int pos = y * bytesPerLine + x * channels;
+
+				if (src->data[pos])
+				{
+
+					int neighborsLabel = length;
+
+					// Kernel
+					int neighbors[4][2] = {{x - 1, y - 1},
+										   {x, y - 1},
+										   {x + 1, y - 1},
+										   {x - 1, y}};
+
+					for (int i = 0; i < 4; i++)
+					{
+
+						int kx = neighbors[i][0];
+						int ky = neighbors[i][1];
+
+						if (kx < 0 || ky < 0 || kx >= width || ky >= heigth)
+							continue;
+
+						int kpos = ky * bytesPerLine + kx * channels;
+
+						neighborsLabel = (dst->data[kpos] != 0 && dst->data[kpos] < neighborsLabel) ? dst->data[kpos] : neighborsLabel;
+					}
+
+					dst->data[pos] = neighborsLabel != length ? neighborsLabel : label++;
+				}
+				else
+				{
+
+					dst->data[pos] = 0;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+// Etiquetagem de blobs
+// src		: Imagem bin�ria de entrada
+// dst		: Imagem grayscale (ir� conter as etiquetas)
+// nlabels	: Endere�o de mem�ria de uma vari�vel, onde ser� armazenado o n�mero de etiquetas encontradas.
+// OVC*		: Retorna um array de estruturas de blobs (objectos), com respectivas etiquetas. � necess�rio libertar posteriormente esta mem�ria.
+OVC *vc_binary_blob_labelling_prof(IVC *src, IVC *dst, int *nlabels)
+{
+	unsigned char *datasrc = (unsigned char *)src->data;
+	unsigned char *datadst = (unsigned char *)dst->data;
+	int width = src->width;
+	int height = src->height;
+	int bytesperline = src->bytesperline;
+	int channels = src->channels;
+	int x, y, a, b;
+	long int i, size;
+	long int posX, posA, posB, posC, posD;
+	int labeltable[256] = {0};
+	int labelarea[256] = {0};
+	int label = 1; // Etiqueta inicial.
+	int num, tmplabel;
+	OVC *blobs; // Apontador para array de blobs (objectos) que ser� retornado desta fun��o.
+
+	// Verifica��o de erros
+	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
+		return 0;
+	if ((src->width != dst->width) || (src->height != dst->height) || (src->channels != dst->channels))
+		return NULL;
+	if (channels != 1)
+		return NULL;
+
+	// Copia dados da imagem bin�ria para imagem grayscale
+	memcpy(datadst, datasrc, bytesperline * height);
+
+	// Todos os pix�is de plano de fundo devem obrigat�riamente ter valor 0
+	// Todos os pix�is de primeiro plano devem obrigat�riamente ter valor 255
+	// Ser�o atribu�das etiquetas no intervalo [1,254]
+	// Este algoritmo est� assim limitado a 254 labels
+	for (i = 0, size = bytesperline * height; i < size; i++)
+	{
+		if (datadst[i] != 0)
+			datadst[i] = 255;
+	}
+
+	// Limpa os rebordos da imagem bin�ria
+	for (y = 0; y < height; y++)
+	{
+		datadst[y * bytesperline + 0 * channels] = 0;
+		datadst[y * bytesperline + (width - 1) * channels] = 0;
+	}
+	for (x = 0; x < width; x++)
+	{
+		datadst[0 * bytesperline + x * channels] = 0;
+		datadst[(height - 1) * bytesperline + x * channels] = 0;
+	}
+
+	// Efectua a etiquetagem
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
+		{
+			// Kernel:
+			// A B C
+			// D X
+
+			posA = (y - 1) * bytesperline + (x - 1) * channels; // A
+			posB = (y - 1) * bytesperline + x * channels;		// B
+			posC = (y - 1) * bytesperline + (x + 1) * channels; // C
+			posD = y * bytesperline + (x - 1) * channels;		// D
+			posX = y * bytesperline + x * channels;				// X
+
+			// Se o pixel foi marcado
+			if (datadst[posX] != 0)
+			{
+				if ((datadst[posA] == 0) && (datadst[posB] == 0) && (datadst[posC] == 0) && (datadst[posD] == 0))
+				{
+					datadst[posX] = label;
+					labeltable[label] = label;
+					label++;
+				}
+				else
+				{
+					num = 255;
+
+					// Se A est� marcado
+					if (datadst[posA] != 0)
+						num = labeltable[datadst[posA]];
+					// Se B est� marcado, e � menor que a etiqueta "num"
+					if ((datadst[posB] != 0) && (labeltable[datadst[posB]] < num))
+						num = labeltable[datadst[posB]];
+					// Se C est� marcado, e � menor que a etiqueta "num"
+					if ((datadst[posC] != 0) && (labeltable[datadst[posC]] < num))
+						num = labeltable[datadst[posC]];
+					// Se D est� marcado, e � menor que a etiqueta "num"
+					if ((datadst[posD] != 0) && (labeltable[datadst[posD]] < num))
+						num = labeltable[datadst[posD]];
+
+					// Atribui a etiqueta ao pixel
+					datadst[posX] = num;
+					labeltable[num] = num;
+
+					// Actualiza a tabela de etiquetas
+					if (datadst[posA] != 0)
+					{
+						if (labeltable[datadst[posA]] != num)
+						{
+							for (tmplabel = labeltable[datadst[posA]], a = 1; a < label; a++)
+							{
+								if (labeltable[a] == tmplabel)
+								{
+									labeltable[a] = num;
+								}
+							}
+						}
+					}
+					if (datadst[posB] != 0)
+					{
+						if (labeltable[datadst[posB]] != num)
+						{
+							for (tmplabel = labeltable[datadst[posB]], a = 1; a < label; a++)
+							{
+								if (labeltable[a] == tmplabel)
+								{
+									labeltable[a] = num;
+								}
+							}
+						}
+					}
+					if (datadst[posC] != 0)
+					{
+						if (labeltable[datadst[posC]] != num)
+						{
+							for (tmplabel = labeltable[datadst[posC]], a = 1; a < label; a++)
+							{
+								if (labeltable[a] == tmplabel)
+								{
+									labeltable[a] = num;
+								}
+							}
+						}
+					}
+					if (datadst[posD] != 0)
+					{
+						if (labeltable[datadst[posD]] != num)
+						{
+							for (tmplabel = labeltable[datadst[posD]], a = 1; a < label; a++)
+							{
+								if (labeltable[a] == tmplabel)
+								{
+									labeltable[a] = num;
+								}
+							}
+						}
 					}
 				}
+			}
+		}
+	}
+
+	// Volta a etiquetar a imagem
+	for (y = 1; y < height - 1; y++)
+	{
+		for (x = 1; x < width - 1; x++)
+		{
+			posX = y * bytesperline + x * channels; // X
+
+			if (datadst[posX] != 0)
+			{
+				datadst[posX] = labeltable[datadst[posX]];
+			}
+		}
+	}
+
+	// printf("\nMax Label = %d\n", label);
+
+	// Contagem do n�mero de blobs
+	// Passo 1: Eliminar, da tabela, etiquetas repetidas
+	for (a = 1; a < label - 1; a++)
+	{
+		for (b = a + 1; b < label; b++)
+		{
+			if (labeltable[a] == labeltable[b])
+				labeltable[b] = 0;
+		}
+	}
+	// Passo 2: Conta etiquetas e organiza a tabela de etiquetas, para que n�o hajam valores vazios (zero) entre etiquetas
+	*nlabels = 0;
+	for (a = 1; a < label; a++)
+	{
+		if (labeltable[a] != 0)
+		{
+			labeltable[*nlabels] = labeltable[a]; // Organiza tabela de etiquetas
+			(*nlabels)++;						  // Conta etiquetas
+		}
+	}
+
+	// Se n�o h� blobs
+	if (*nlabels == 0)
+		return NULL;
+
+	// Cria lista de blobs (objectos) e preenche a etiqueta
+	blobs = (OVC *)calloc((*nlabels), sizeof(OVC));
+	if (blobs != NULL)
+	{
+		for (a = 0; a < (*nlabels); a++)
+			blobs[a].label = labeltable[a];
+	}
+	else
+		return NULL;
+
+	return blobs;
+}
+
+
+int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs)
+{
+	unsigned char *data = (unsigned char *)src->data;
+	int width = src->width;
+	int height = src->height;
+	int bytesperline = src->bytesperline;
+	int channels = src->channels;
+	int x, y, i;
+	long int pos;
+	int xmin, ymin, xmax, ymax;
+	long int sumx, sumy;
+
+	// Verifica��o de erros
+	if ((src->width <= 0) || (src->height <= 0) || (src->data == NULL))
+		return 0;
+	if (channels != 1)
+		return 0;
+
+	// Conta �rea de cada blob
+	for (i = 0; i < nblobs; i++)
+	{
+		xmin = width - 1;
+		ymin = height - 1;
+		xmax = 0;
+		ymax = 0;
+
+		sumx = 0;
+		sumy = 0;
+
+		blobs[i].area = 0;
+
+		for (y = 1; y < height - 1; y++)
+		{
+			for (x = 1; x < width - 1; x++)
+			{
+				pos = y * bytesperline + x * channels;
+
+				if (data[pos] == blobs[i].label)
+				{
+					// �rea
+					blobs[i].area++;
+
+					// Centro de Gravidade
+					sumx += x;
+					sumy += y;
+
+					// Bounding Box
+					if (xmin > x)
+						xmin = x;
+					if (ymin > y)
+						ymin = y;
+					if (xmax < x)
+						xmax = x;
+					if (ymax < y)
+						ymax = y;
+
+					// Per�metro
+					// Se pelo menos um dos quatro vizinhos n�o pertence ao mesmo label, ent�o � um pixel de contorno
+					if ((data[pos - 1] != blobs[i].label) || (data[pos + 1] != blobs[i].label) || (data[pos - bytesperline] != blobs[i].label) || (data[pos + bytesperline] != blobs[i].label))
+					{
+						blobs[i].perimeter++;
+					}
+				}
+			}
+		}
+
+		// Bounding Box
+		blobs[i].x = xmin;
+		blobs[i].y = ymin;
+		blobs[i].width = (xmax - xmin) + 1;
+		blobs[i].height = (ymax - ymin) + 1;
+
+		// Centro de Gravidade
+		blobs[i].xc = (xmax - xmin) / 2;
+		blobs[i].yc = (ymax - ymin) / 2;
+		blobs[i].xc = sumx / MAX(blobs[i].area, 1);
+		blobs[i].yc = sumy / MAX(blobs[i].area, 1);
+	}
+
+	return 1;
+}
+
+
+// FUNÇÃO ETIQUETAGEM COM 1 BUFFER - MAIS LENTO QUE O NORMAL PORÉM USA MENOS MEMÓRIA - FALTA A ÚLTIMA PARTE
+OVC *vc_binary_blob_labelling_buffer(IVC *src, IVC *dst, int *nlabels)
+{
+
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int label = 1;
+
+	memset(dst->data, 0, width * height * channels);
+
+	// CRIAÇÃO DO BUFFER
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+
+			if (src->data[pos])
+			{
+
+				int neighbors[4][2] = {{x - 1, y - 1}, {x, y - 1}, {x + 1, y - 1}, {x - 1, y}};
+				int neighborsLabel = length;
+
+				for (int i = 0; i < 4; i++)
+				{
+
+					int kx = neighbors[i][0];
+					int ky = neighbors[i][1];
+
+					if (kx < 0 || ky < 0 || kx >= width || ky >= height)
+						continue;
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					neighborsLabel = (dst->data[kpos] != 0 && dst->data[kpos] < neighborsLabel) ? dst->data[kpos] : neighborsLabel;
+				}
+
+				dst->data[pos] = neighborsLabel != length ? neighborsLabel : label++;
+			}
+			else
+			{
+
+				dst->data[pos] = 0;
+			}
+		}
+	}
+
+	// COMPARAR OS VIZINHOS NO BUFFER
+	for (int y = height - 1; y >= 0; y--)
+	{
+		for (int x = width - 1; x >= 0; x--)
+		{
+
+			int pos = y * bytesPerLine + x * channels;
+			int minLabel = dst->data[pos];
+
+			if (dst->data[pos])
+			{
+
+				for (int ky = y - 1; ky <= y + 1; ky++)
+				{
+					for (int kx = x - 1; kx <= x + 1; kx++)
+					{
+
+						if (kx < 0 || ky < 0 || kx >= width || ky >= height)
+							continue;
+
+						int kpos = ky * bytesPerLine + kx * channels;
+
+						minLabel = (dst->data[kpos] < minLabel && dst->data[kpos] != 0) ? dst->data[kpos] : minLabel;
+					}
+				}
+
+				dst->data[pos] = minLabel;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+// MAIS RAPIDA
+OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
+{
+
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int height = src->height;
+	int width = src->width;
+	int label = 1;
+	OVC *blobs;
+
+	// Fix do chatgpt
+	int labelTable[256];
+	for (int i = 0; i < 256; i++)
+	{
+		labelTable[i] = i;
+	}
+
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int pos = y * bytesPerLine + x * channels;
+
+			if (src->data[pos])
+			{
+				int neighbors[4][2] = {{x - 1, y - 1}, {x, y - 1}, {x + 1, y - 1}, {x - 1, y}};
+				int actualLabel = 255;
+				int count = 0; // contar vizinhos válidos - fix do chatgpt
+
+				for (int i = 0; i < 4; i++)
+				{
+					int kx = neighbors[i][0];
+					int ky = neighbors[i][1];
+
+					if (kx < 0 || ky < 0 || kx >= width || ky >= height)
+						continue;
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					if (dst->data[kpos])
+					{
+						count++;
+
+						if (dst->data[kpos] < actualLabel)
+						{
+							actualLabel = dst->data[kpos];
+						}
+					}
+				}
+
+				if (actualLabel != 255)
+				{
+					dst->data[pos] = actualLabel;
+
+					// só unir se houver mais que 1 vizinho - fix do chatgpt
+					if (count > 1)
+					{
+						for (int i = 0; i < 4; i++)
+						{
+							int kx = neighbors[i][0];
+							int ky = neighbors[i][1];
+
+							if (kx < 0 || ky < 0 || kx >= width || ky >= height)
+								continue;
+
+							int kpos = ky * bytesPerLine + kx * channels;
+							int neighborLabel = dst->data[kpos];
+
+							if (neighborLabel != 0 && neighborLabel != actualLabel)
+							{
+								int a = neighborLabel;
+								int b = actualLabel;
+
+								while (labelTable[a] != a)
+									a = labelTable[a];
+
+								while (labelTable[b] != b)
+									b = labelTable[b];
+
+								if (a != b)
+									labelTable[a] = b;
+							}
+						}
+					}
+				}
+				else
+				{
+					dst->data[pos] = label;
+					labelTable[label] = label;
+					label++;
+				}
+			}
+			else
+			{
+				dst->data[pos] = 0;
+			}
+		}
+	}
+
+	// segunda passagem
+	for (int y = height - 1; y >= 0; y--)
+	{
+		for (int x = width - 1; x >= 0; x--)
+		{
+			int pos = y * bytesPerLine + x * channels;
+
+			if (dst->data[pos])
+			{
+				int i = dst->data[pos];
+
+				while (labelTable[i] != i)
+				{
+					i = labelTable[i];
+				}
+
+				dst->data[pos] = i; // * 5; // para visualização
+			}
+		}
+	}
+
+	for (int a = 1; a < label - 1; a++)
+	{
+		for (int b = a + 1; b < label; b++)
+		{
+			if (labelTable[a] == labelTable[b])
+				labelTable[b] = 0;
+		}
+	}
+	// Passo 2: Conta etiquetas e organiza a tabela de etiquetas, para que n�o hajam valores vazios (zero) entre etiquetas
+	*nlabels = 0;
+	for (int a = 1; a < label; a++)
+	{
+		if (labelTable[a] != 0)
+		{
+			labelTable[*nlabels] = labelTable[a]; // Organiza tabela de etiquetas
+			(*nlabels)++;						  // Conta etiquetas
+		}
+	}
+
+	// Se n�o h� blobs
+	if (*nlabels == 0)
+		return NULL;
+
+	// Cria lista de blobs (objectos) e preenche a etiqueta
+	blobs = (OVC *)calloc((*nlabels), sizeof(OVC));
+	if (blobs != NULL)
+	{
+		for (int a = 0; a < (*nlabels); a++)
+			blobs[a].label = labelTable[a];
+	}
+	else
+		return NULL;
+
+	return blobs;
+}
+
+
+int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kernel, int thickness, int colorR, int colorG, int colorB){
+
+	for (int i = 0; i < nlabels; i++)
+    {
+        int xc = blobs[i].xc;
+        int yc = blobs[i].yc;
+		int offset = (kernel - 1) / 2;
+		int thickOffset = thickness / 2;
+
+        for(int y = yc - offset; y <= yc + offset; y++){
+
+			if(y < 0 || y >= srcdst->height) continue;
+
+            for(int x = xc - offset; x <= xc + offset; x++){
+
+				if(x < 0 || x >= srcdst->width) continue;
+
+                if((x < xc - thickOffset || x > xc + thickOffset) && (y < yc - thickOffset || y > yc + thickOffset)) continue;
+                int pos = y * srcdst->bytesperline + x * srcdst->channels;
 				
-				if(dst->data[pos] == 255) {
-					break;
+                srcdst->data[pos] = colorR;
+				srcdst->data[pos + 1] = colorG;
+				srcdst->data[pos + 2] = colorB;
+            }
+        }
+    }
+
+	return 1;
+}
+
+
+int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB){
+
+	for(int i = 0; i < nlabels; i++){
+
+		int height = blobs[i].height;
+		int width = blobs[i].width;
+		int xc = blobs[i].xc;
+		int yc = blobs[i].yc;
+
+		for(int y = yc - (height / 2) - padding; y <= yc + (height / 2) + padding; y++){
+			for(int x = xc - (width / 2) - padding; x <= xc + (width / 2) + padding; x++){
+
+				int pos = y * srcdst->bytesperline + x * srcdst->channels;
+
+				if (x - padding < 0 || x + padding >= srcdst->width || y - padding < 0 || y + padding >= srcdst->height) continue;
+
+				if(y == yc - (height / 2) - padding || y == yc + (height/2) + padding){
+
+					for(int j = 0; j < thickness; j++){
+
+						srcdst->data[pos + (j * srcdst->bytesperline)] = colorR;
+						srcdst->data[pos + 1 + (j * srcdst->bytesperline)] = colorG;
+						srcdst->data[pos + 2 + (j * srcdst->bytesperline)] = colorB;
+					}
+				}
+
+				if(x == xc - (width / 2) - padding || x == xc + (width / 2) + padding){
+
+					for(int j = 0, k = 0; j < thickness; j++, k += 3){
+						
+						srcdst->data[pos + k] = colorR;
+						srcdst->data[pos + 1 + k] = colorG;
+						srcdst->data[pos + 2 + k] = colorB;
+					}
 				}
 			}
 		}
@@ -4278,15 +5826,502 @@ int vc_binary_dilate_gray(IVC *src, IVC *dst, int kernel) {
 }
 
 
+int vc_gray_histogram_show(IVC *src, IVC *dst){
+
+	int hist[256] = { 0 };
+	int length = src->height * src->width;
+	int max = 0;
+
+	// CALCULAR A QUANTIDADE DE VEZES QUE CADA NIVEL APARECE
+	for(int i = 0; i < length; i++){
+
+		hist[src->data[i]]++;
+	}
+
+	// ENCONTRAR O VALOR QUE APARECE MAIS VEZES NA IMAGEM
+	for(int i = 0; i < 256; i++){
+
+		max = hist[i] > max ? hist[i] : max;
+	}
+
+	// INICIALIZAR A IMAGEM DESTINO A ZERO
+	for(int i = 0; i < dst->height * dst->width; i++){
+
+		dst->data[i] = 0;
+	}
+
+	// NORMALIZAR ENTRE 0 E 255
+	for(int i = 0; i < 256; i++){
+
+		hist[i] = (hist[i] * 255) / max;
+	}
+
+	for(int x = 0; x < dst->width; x++){
+		for(int y = dst->height - 1; y >= dst->height - hist[x]; y--){
+
+			int pos = y * dst->bytesperline + x * dst->channels;
+			dst->data[pos] = 255;
+		}
+	}
+
+	return 1;
+}
 
 
+int vc_gray_histogram_equalization(IVC *src, IVC *dst){
+
+	int hist[256] = { 0 };
+	int length = src->width * src->height * src->channels;
+
+	// CALCULAR A QUANTIDADE DE VEZES QUE CADA NIVEL APARECE
+	for(int i = 0; i < length; i++){
+
+		hist[src->data[i]]++;
+	}
+	
+	// NORMALIZAR ENTRE [0,1]
+	float histograma[256] = { 0 };
+	for(int i = 0; i < 256; i++){
+
+		histograma[i] = (float)hist[i] / length;
+	}
+
+	// FUNÇÂO ACUMULADA E CDFMin
+	float acc[256] = { 0 };
+	float cdfMin = 0, cdfMinFound = 0;
+	acc[0] = histograma[0];
+
+	if(acc[0] != 0){
+		cdfMin = acc[0];
+		cdfMinFound = 1;
+	}
+
+	for(int i = 1; i < 256; i++){
+		
+		acc[i] = acc[i - 1] + histograma[i];
+		
+		if(acc[i] != 0 && !cdfMinFound){
+			cdfMin = acc[i];
+			cdfMinFound = 1;
+		}
+	}
+
+	for(int i = 0; i < length; i++){
+
+		dst->data[i] = (unsigned char)(((acc[src->data[i]] - cdfMin) / (1.0 - cdfMin)) * (dst->levels - 1));
+	}
+
+	return 1;
+}
 
 
+int vc_gray_edge_prewitt(IVC *src, IVC *dst, float th){
 
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
 
+	int *xImage = (int*)malloc(sizeof(int) * length);
+	int *yImage = (int*)malloc(sizeof(int) * length);
+	int *mag = (int*)malloc(sizeof(int) * length);
 
+	if (xImage == NULL || yImage == NULL || mag == NULL) return 0;
 
+	int xkernel[9] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+	int ykernel[9] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
 
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
 
+			int pos = y * bytesPerLine + x * channels;
+			int i = 0;
+			int soma = 0;
 
+			for(int ky = y - 1; ky <= y + 1; ky++){
+				for(int kx = x - 1; kx <= x + 1; kx++){
 
+					if(kx < 0 || kx >= width || ky < 0 || ky >= height){
+
+						i++;
+						continue;
+					}
+
+					int kpos = ky * bytesPerLine + kx * channels;
+					soma += (src->data[kpos] * xkernel[i++]);
+				}
+			}
+
+			soma /= 3;
+			xImage[pos] = soma;
+		}
+	}
+
+	for(int x = 0; x < width; x++){
+		for(int y = 0; y < height; y++){
+
+			int pos = y * bytesPerLine + x * channels;
+			int i = 0;
+			int soma = 0;
+
+			for(int ky = y - 1; ky <= y + 1; ky++){
+				for(int kx = x - 1; kx <= x + 1; kx++){
+
+					if(kx < 0 || kx >= width || ky < 0 || ky >= height){
+
+						i++;
+						continue;
+					}
+
+					int kpos = ky * bytesPerLine + kx * channels;
+					soma += (src->data[kpos] * ykernel[i++]);
+				}
+			}
+			
+			soma /= 3;
+			yImage[pos] = soma;
+		}
+	}
+
+	for(int i = 0; i < length; i++){
+
+		mag[i] = (sqrt((xImage[i] * xImage[i]) + (yImage[i] * yImage[i]))) / sqrt(2);
+	}
+
+	int hist[256] = { 0 };
+
+	// CONSTRUIR HISTOGRAMA
+	for(int i = 0; i < length; i++){
+		
+		hist[mag[i]]++;
+	}
+
+	float numberPixels = th * length;
+	float soma = 0;
+	int threshold = 255;
+	
+	for(int i = 0; i < 256; i++){
+
+		soma += hist[i];
+
+		if(soma >= numberPixels){
+
+			threshold = i;
+			break;
+		}
+	}
+
+	for(int i = 0; i < length; i++){
+
+		dst->data[i] = mag[i] >= threshold ? 255 : 0;
+	}
+
+	free(xImage);
+	free(yImage);
+	free(mag);
+
+	return 1;
+}
+
+int vc_gray_lowpass_mean_filter(IVC *src, IVC *dst, int kernelsize){
+
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int offset = (kernelsize - 1) / 2;
+
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
+
+			int pos = y * bytesPerLine + x * channels;
+			float soma = 0;
+			float count = 0;
+
+			for(int ky = y - offset; ky <= y + offset; ky++){
+				for(int kx = x - offset; kx <= x + offset; kx++){
+
+					if(ky >= height || ky < 0 || kx >= width || kx < 0) continue;
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					soma += src->data[kpos];
+					count++;
+				}
+			}
+
+			dst->data[pos] = (soma / count);
+		}
+	}
+
+	return 0;
+}
+
+int vc_gray_lowpass_median_filter(IVC *src, IVC *dst, int kernelsize){
+
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int offset = (kernelsize - 1) / 2;
+
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
+
+			int pos = y * bytesPerLine + x * channels;
+			int *data = (int*)malloc(sizeof(int) * kernelsize * kernelsize);
+			int count = 0;
+
+			for(int ky = y - offset; ky <= y + offset; ky++){
+				for(int kx = x - offset; kx <= x + offset; kx++){
+
+					if(ky >= height || ky < 0 || kx >= width || kx < 0) continue;
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					data[count++] = src->data[kpos];
+				}
+			}
+		
+			for(int i = 0; i < count - 1; i++){
+				for(int j = i + 1; j < count; j++){
+
+					if(data[i] > data[j]){
+
+						int tmp;
+						tmp = data[i];
+						data[i] = data[j];
+						data[j] = tmp;
+					}
+				}				
+			}
+
+			if(count % 2 == 0){
+
+				int median = count / 2;
+				int mean = (data[median] + data[median - 1]) / 2;
+				
+				dst->data[pos] = mean;
+			}
+			else{
+
+				dst->data[pos] = data[count / 2];
+			}
+
+			free(data);
+		}
+	}
+
+	return 0;
+}
+
+int vc_gray_lowpass_gaussian_filter(IVC *src, IVC *dst){
+
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+
+	float kernel[5] = { 0.054, 0.242, 0.399, 0.242, 0.054 };
+	int offset = (5 - 1) / 2;
+
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
+
+			int pos = y * bytesPerLine + x * channels;
+			float gaussian = 0;
+
+			for(int ky = -offset;  ky <= offset; ky++){
+				for(int kx = -offset; kx <= offset; kx++){
+
+					if(y + ky < 0 || y + ky >= height || x + kx < 0 || x + kx >= width) continue;
+
+					int kpos = (y + ky) * bytesPerLine + (x + kx) * channels;
+					gaussian += ((float)src->data[kpos]) * kernel[kx + offset] * kernel[ky + offset];
+				}
+			}
+
+			dst->data[pos] = (unsigned char)gaussian;			
+		}
+	}
+
+	return 1;
+}
+
+int vc_gray_highpass_filter(IVC *src, IVC *dst){
+
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int offset = (3 - 1) / 2;
+
+	int kernel[9] = {-1, -1, -1,
+					 -1, 8, -1,
+					 -1, -1, -1};
+
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
+
+			int pos = y * bytesPerLine + x * channels;
+			int soma = 0;
+			int i = 0;
+
+			for(int ky = y - offset; ky <= y + offset; ky++){
+				for(int kx = x - offset; kx <= x + offset; kx++){
+
+					if(ky < 0 || ky >= height || kx < 0 || kx >= width){
+
+						i++;
+						continue;
+					}
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					soma += src->data[kpos] * kernel[i++];
+				}
+			}
+
+			int res = (int)(soma / 9);
+			dst->data[pos] = res < 0 ? 0 : res > 255 ? 255 : (unsigned char)res;
+		}
+	}
+
+	return 1;
+}
+
+int vc_gray_highpass_filter_enhance(IVC *src, IVC *dst, int gain){
+
+	int height = src->height;
+	int width = src->width;
+	int length = height * width;
+	int channels = src->channels;
+	int bytesPerLine = src->bytesperline;
+	int offset = (3 - 1) / 2;
+
+	int kernel[9] = {-1, -1, -1,
+					 -1, 8, -1,
+					 -1, -1, -1};
+
+	for(int y = 0; y < height; y++){
+		for(int x = 0; x < width; x++){
+
+			int pos = y * bytesPerLine + x * channels;
+			int soma = 0;
+			int i = 0;
+
+			for(int ky = y - offset; ky <= y + offset; ky++){
+				for(int kx = x - offset; kx <= x + offset; kx++){
+
+					if(ky < 0 || ky >= height || kx < 0 || kx >= width){
+
+						i++;
+						continue;
+					}
+
+					int kpos = ky * bytesPerLine + kx * channels;
+
+					soma += src->data[kpos] * kernel[i++];
+				}
+			}
+
+			int res = (int)(soma / 9) * gain + src->data[pos];
+			dst->data[pos] = res < 0 ? 0 : res > 255 ? 255 : (unsigned char)res;
+		}
+	}
+
+	return 1;
+}
+
+/**
+ * @brief Construct a new vc hsv saturation and value modified object
+ * 
+ * @param src 
+ * @param dst 
+ * @param satMod [0, 1] percentage mode
+ * @param valMod [0, 1] percentage mode
+ */
+int vc_hsv_saturation_and_value_modified_nuno(IVC* src, IVC* dst, float satMod, float valMod){
+
+	int length = src->width * src->height * src->channels;
+
+	for(int i = 0; i < length; i += src->channels){
+
+		int s = (int)(src->data[i+1] * satMod);
+		int v = (int)(src->data[i+2] * valMod);
+
+		dst->data[i] = src->data[i];
+		dst->data[i+1] = s > 255 ? 255 : s < 0 ? 0 : s;
+		dst->data[i+2] = v > 255 ? 255 : v < 0 ? 0 : v;
+	}
+
+	return 1;
+}
+
+int vc_hsv_histogram_equalization(IVC *src, IVC *dst){
+
+	int histSAT[256] = { 0 };
+	int histVAL[256] = { 0 };
+	int length = src->width * src->height * src->channels;
+
+	// CALCULAR A QUANTIDADE DE VEZES QUE CADA NIVEL APARECE
+	for(int i = 0; i < length; i += src->channels){
+
+		histSAT[src->data[i + 1]]++;
+		histVAL[src->data[i + 2]]++;
+	}
+	
+	// NORMALIZAR ENTRE [0,1]
+	float histogramaSAT[256] = { 0 };
+	float histogramaVAL[256] = { 0 };
+	for(int i = 0; i < 256; i++){
+
+		histogramaSAT[i] = (float)histSAT[i] / (src->width * src->height);
+		histogramaVAL[i] = (float)histVAL[i] / (src->width * src->height);
+	}
+
+	// FUNÇÂO ACUMULADA E CDFMin
+	float accSAT[256] = { 0 };
+	float accVAL[256] = { 0 };
+	float cdfMinSAT = 0, cdfMinVAL = 0, cdfMinFoundSAT = 0, cdfMinFoundVAL = 0;
+	accSAT[0] = histogramaSAT[0];
+	accVAL[0] = histogramaVAL[0];
+
+	if(accSAT[0] != 0){
+		cdfMinSAT = accSAT[0];
+		cdfMinFoundSAT = 1;
+	}
+	
+	if(accVAL[0] != 0){
+		cdfMinVAL = accVAL[0];
+		cdfMinFoundVAL = 1;
+	}
+
+	for(int i = 1; i < 256; i++){
+		
+		accSAT[i] = accSAT[i - 1] + histogramaSAT[i];
+		accVAL[i] = accVAL[i - 1] + histogramaVAL[i];
+		
+		if(accSAT[i] != 0 && !cdfMinFoundSAT){
+			cdfMinSAT = accSAT[i];
+			cdfMinFoundSAT = 1;
+		}
+
+		if(accVAL[i] != 0 && !cdfMinFoundVAL){
+			cdfMinVAL = accVAL[i];
+			cdfMinFoundVAL = 1;
+		}
+	}
+
+	for(int i = 0; i < length; i += src->channels){
+
+		dst->data[i] = src->data[i];
+		dst->data[i + 1] = (unsigned char)(((accSAT[src->data[i + 1]] - cdfMinSAT) / (1.0 - cdfMinSAT)) * (dst->levels - 1));
+		dst->data[i + 2] = (unsigned char)(((accVAL[src->data[i + 2]] - cdfMinVAL) / (1.0 - cdfMinVAL)) * (dst->levels - 1));
+	}
+
+	return 1;
+}
