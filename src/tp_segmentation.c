@@ -130,19 +130,18 @@ int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int sm
 /**
  * @brief Multiplica saturacao e valor por fatores definidos e limita o resultado a 0-255.
  */
-int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod)
+int vc_hsv_saturation_and_value_modified(IVC* srcdst, float satMod, float valMod)
 {
 
-	int length = src->width * src->height * src->channels;
+	int length = srcdst->width * srcdst->height * srcdst->channels;
 
-	for(int i = 0; i < length; i += src->channels){
+	for(int i = 0; i < length; i += srcdst->channels){
 
-		int s = (int)(src->data[i+1] * satMod);
-		int v = (int)(src->data[i+2] * valMod);
+		int s = (int)(srcdst->data[i+1] * satMod + 0.5f);
+		int v = (int)(srcdst->data[i+2] * valMod + 0.5f);
 
-		dst->data[i] = src->data[i];
-		dst->data[i+1] = s > 255 ? 255 : s < 0 ? 0 : s;
-		dst->data[i+2] = v > 255 ? 255 : v < 0 ? 0 : v;
+		srcdst->data[i+1] = s > 255 ? 255 : s < 0 ? 0 : s;
+		srcdst->data[i+2] = v > 255 ? 255 : v < 0 ? 0 : v;
 	}
 
 	return 1;

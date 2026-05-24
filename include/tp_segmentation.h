@@ -47,6 +47,6 @@ int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int sm
  * @param valMod Fator multiplicativo para o valor.
  * @return int 1 se o ajuste for executado.
  */
-int vc_hsv_saturation_and_value_modified(IVC* src, IVC* dst, float satMod, float valMod);
+int vc_hsv_saturation_and_value_modified(IVC* srcdst, float satMod, float valMod);
 
 #endif

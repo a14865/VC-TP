@@ -98,11 +98,12 @@ int main(void)
         memcpy(image->data, frame.data, video.height * video.width * 3);
 
         vc_bgr_to_hsv(image, imageHSV);
-        vc_hsv_segmentation(imageHSV, imageSEG, 10, 34, 30, 100, 0, 100);
+        vc_hsv_saturation_and_value_modified(imageHSV, 1, 255);
+        vc_hsv_segmentation(imageHSV, imageSEG, 12, 34, 30, 100, 0, 100);
 
         memcpy(frameSeg.data, imageSEG->data, video.width * video.height);
 
-        medianBlur(frameSeg, frameSeg, 5);
+        //medianBlur(frameSeg, frameSeg, 5);
         morphologyEx(frameSeg, frameSeg, MORPH_CLOSE, elementClose);
         morphologyEx(frameSeg, frameSeg, MORPH_OPEN, elementOpen);
 
