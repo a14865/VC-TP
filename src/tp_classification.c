@@ -50,7 +50,7 @@ static int pixelBelongsToOrange(IVC *labelsImage, OVC *orange, int x, int y)
 static int grayPixel(IVC *rgbImage, int x, int y)
 {
   int rgbPos = y * rgbImage->bytesperline + x * rgbImage->channels;
-  return rgbIntensity(rgbImage->data[rgbPos], rgbImage->data[rgbPos + 1], rgbImage->data[rgbPos + 2]);
+  return rgbIntensity(rgbImage->data[rgbPos + 2], rgbImage->data[rgbPos + 1], rgbImage->data[rgbPos]);
 }
 
 /**
@@ -259,9 +259,9 @@ int orangeQualityCategory(IVC *rgbImage, IVC *labelsImage, OVC *orange, OrangeQu
       if (labelsImage->data[labelPos] != orange->label) continue;
 
       rgbPos = y * rgbImage->bytesperline + x * rgbImage->channels;
-      r = rgbImage->data[rgbPos];
+      b = rgbImage->data[rgbPos];
       g = rgbImage->data[rgbPos + 1];
-      b = rgbImage->data[rgbPos + 2];
+      r = rgbImage->data[rgbPos + 2];
 
       totalPixels++;
       histogram[grayPixel(rgbImage, x, y)]++;
@@ -295,9 +295,9 @@ int orangeQualityCategory(IVC *rgbImage, IVC *labelsImage, OVC *orange, OrangeQu
       if (labelsImage->data[labelPos] != orange->label) continue;
 
       rgbPos = y * rgbImage->bytesperline + x * rgbImage->channels;
-      r = rgbImage->data[rgbPos];
+      b = rgbImage->data[rgbPos];
       g = rgbImage->data[rgbPos + 1];
-      b = rgbImage->data[rgbPos + 2];
+      r = rgbImage->data[rgbPos + 2];
       intensity = medianGrayInOrange(rgbImage, labelsImage, orange, x, y);
 
       if (isTypicalOrangePixel(r, g, b)) typicalPixels++;
