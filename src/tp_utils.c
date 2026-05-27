@@ -1,16 +1,4 @@
-﻿/*
-===============================================================================
-FICHEIRO: tp_utils.c
-
-DESCRICAO:
-Este ficheiro contem funcoes auxiliares usadas por varios modulos do projeto.
-
-OBJETIVO:
-Reunir operacoes comuns, como gestao de imagens e conversoes de unidades.
-===============================================================================
-*/
-// Desabilita (no MSVC++) warnings de fun��es n�o seguras (fopen, sscanf, etc...)
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <ctype.h>
@@ -27,10 +15,6 @@ Reunir operacoes comuns, como gestao de imagens e conversoes de unidades.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-// Alocar memória para uma imagem
-/**
- * @brief Aloca memoria para uma imagem IVC e inicializa os seus metadados.
- */
 IVC *vc_image_new(int width, int height, int channels, int levels)
 {
 	IVC *image = (IVC *) malloc(sizeof(IVC));
@@ -53,10 +37,6 @@ IVC *vc_image_new(int width, int height, int channels, int levels)
 	return image;
 }
 
-// Libertar memória de uma imagem
-/**
- * @brief Liberta a memoria ocupada por uma imagem IVC.
- */
 IVC *vc_image_free(IVC *image)
 {
 	if(image != NULL)
@@ -78,9 +58,6 @@ IVC *vc_image_free(IVC *image)
 //    FUNÇÕES: LEITURA E ESCRITA DE IMAGENS (PBM, PGM E PPM)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-/**
- * @brief Le o proximo token de um ficheiro NetPBM, ignorando espacos e comentarios.
- */
 char *netpbm_get_token(FILE *file, char *tok, int len)
 {
 	char *t;
@@ -113,9 +90,6 @@ char *netpbm_get_token(FILE *file, char *tok, int len)
 	return tok;
 }
 
-/**
- * @brief Converte uma imagem binaria em unsigned char para bytes compactados em bits.
- */
 long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, int width, int height)
 {
 	int x, y;
@@ -135,14 +109,6 @@ long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, 
 
 			if(countbits <= 8)
 			{
-				// Numa imagem PBM:
-				// 1 = Preto
-				// 0 = Branco
-				//*p |= (datauchar[pos] != 0) << (8 - countbits);
-				
-				// Na nossa imagem:
-				// 1 = Branco
-				// 0 = Preto
 				*p |= (datauchar[pos] == 0) << (8 - countbits);
 
 				countbits++;
@@ -160,9 +126,6 @@ long int unsigned_char_to_bit(unsigned char *datauchar, unsigned char *databit, 
 	return counttotalbytes;
 }
 
-/**
- * @brief Expande bytes compactados em bits para uma imagem binaria em unsigned char.
- */
 void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int width, int height)
 {
 	int x, y;
@@ -180,14 +143,6 @@ void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int 
 
 			if(countbits <= 8)
 			{
-				// Numa imagem PBM:
-				// 1 = Preto
-				// 0 = Branco
-				//datauchar[pos] = (*p & (1 << (8 - countbits))) ? 1 : 0;
-
-				// Na nossa imagem:
-				// 1 = Branco
-				// 0 = Preto
 				datauchar[pos] = (*p & (1 << (8 - countbits))) ? 0 : 1;
 				
 				countbits++;
@@ -201,9 +156,6 @@ void bit_to_unsigned_char(unsigned char *databit, unsigned char *datauchar, int 
 	}
 }
 
-/**
- * @brief Le uma imagem PBM, PGM ou PPM para a estrutura IVC.
- */
 IVC *vc_read_image(char *filename)
 {
 	FILE *file = NULL;
@@ -215,10 +167,8 @@ IVC *vc_read_image(char *filename)
 	int levels = 255;
 	int v;
 	
-	// Abre o ficheiro
 	if((file = fopen(filename, "rb")) != NULL)
 	{
-		// Efectua a leitura do header
 		netpbm_get_token(file, tok, sizeof(tok));
 
 		if(strcmp(tok, "P4") == 0) { channels = 1; levels = 1; }	// Se PBM (Binary [0,1])
@@ -234,7 +184,7 @@ IVC *vc_read_image(char *filename)
 			return NULL;
 		}
 		
-		if(levels == 1) // PBM
+		if(levels == 1)
 		{
 			if(sscanf(netpbm_get_token(file, tok, sizeof(tok)), "%d", &width) != 1 || 
 			   sscanf(netpbm_get_token(file, tok, sizeof(tok)), "%d", &height) != 1)
@@ -247,7 +197,6 @@ IVC *vc_read_image(char *filename)
 				return NULL;
 			}
 
-			// Aloca memória para imagem
 			image = vc_image_new(width, height, channels, levels);
 			if(image == NULL) return NULL;
 
@@ -275,7 +224,7 @@ IVC *vc_read_image(char *filename)
 
 			free(tmp);
 		}
-		else // PGM ou PPM
+		else 
 		{
 			if(sscanf(netpbm_get_token(file, tok, sizeof(tok)), "%d", &width) != 1 || 
 			   sscanf(netpbm_get_token(file, tok, sizeof(tok)), "%d", &height) != 1 || 
@@ -289,7 +238,6 @@ IVC *vc_read_image(char *filename)
 				return NULL;
 			}
 
-			// Aloca memória para imagem
 			image = vc_image_new(width, height, channels, levels);
 			if(image == NULL) return NULL;
 
@@ -323,9 +271,6 @@ IVC *vc_read_image(char *filename)
 	return image;
 }
 
-/**
- * @brief Escreve uma imagem IVC em formato PBM, PGM ou PPM.
- */
 int vc_write_image(char *filename, IVC *image)
 {
 	FILE *file = NULL;
@@ -382,10 +327,6 @@ int vc_write_image(char *filename, IVC *image)
 	return 0;
 }
 
-//Funções de Validação
-/**
- * @brief Verifica se duas imagens existem antes de uma operacao entre elas.
- */
 void valImages(IVC *img1, IVC *img2)
 {
     if(img1 == NULL ||img2 == NULL)
@@ -394,10 +335,6 @@ void valImages(IVC *img1, IVC *img2)
     }
 }
 
-//Função de Conversão de Pixeis para Milimetros
-/**
- * @brief Converte uma medida linear em pixeis para milimetros.
- */
 int convertPixToMM(float pixelValue)
 {	
 
@@ -410,9 +347,6 @@ int convertPixToMM(float pixelValue)
     return mmValueRound;
 }
 
-/**
- * @brief Converte uma area em pixeis quadrados para milimetros quadrados.
- */
 int convertPixAreaToMM2(float pixelArea)
 {
     float scale = 55.0f / 280.0f;

@@ -1,23 +1,7 @@
-﻿/*
-===============================================================================
-FICHEIRO: tp_segmentation.c
+﻿#include "../include/tp_segmentation.h"
 
-DESCRICAO:
-Este ficheiro contem as funcoes usadas para segmentar as laranjas nas frames.
-
-OBJETIVO:
-Converter a imagem para espacos de cor adequados e gerar a mascara binaria dos
-objetos que serao medidos e classificados.
-===============================================================================
-*/
-#include "../include/tp_segmentation.h"
-
-/**
- * @brief Converte cada pixel RGB para HSV usando os canais normalizados.
- */
 int vc_bgr_to_hsv(IVC *src, IVC *dst)
 {
-	//Validação
 	valImages(src,dst);
 
 	int lenght = src->height * src->width * src->channels;
@@ -34,7 +18,6 @@ int vc_bgr_to_hsv(IVC *src, IVC *dst)
 		float sat = 0;
 		float val = 0;
 
-		// Find Value
 		float max = r > g ? (r > b ? r : b) : (g > b ? g : b);
 
 		val = max;
@@ -47,7 +30,6 @@ int vc_bgr_to_hsv(IVC *src, IVC *dst)
 			continue;
 		}
 
-		// Find Saturation
 		float min = r < g ? (r < b ? r : b) : (g < b ? g : b);
 
 		if (max == min)
@@ -61,7 +43,6 @@ int vc_bgr_to_hsv(IVC *src, IVC *dst)
 
 		sat = (max - min) / max;
 
-		// Find Hue
 		if (max == r && g >= b)
 		{
 			hue = 60 * (g - b) / (max - min);
@@ -87,9 +68,6 @@ int vc_bgr_to_hsv(IVC *src, IVC *dst)
 	return 1;
 }
 
-/**
- * @brief Cria uma mascara binaria selecionando pixeis dentro dos intervalos HSV.
- */
 int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int smax, int vmin, int vmax)
 {
 
@@ -127,9 +105,6 @@ int vc_hsv_segmentation(IVC *src, IVC *dst, int hmin, int hmax, int smin, int sm
 	return 1;
 }
 
-/**
- * @brief Multiplica saturacao e valor por fatores definidos e limita o resultado a 0-255.
- */
 int vc_hsv_saturation_and_value_modified(IVC* srcdst, float satMod, float valMod)
 {
 

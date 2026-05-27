@@ -1,38 +1,16 @@
-/*
-===============================================================================
-FICHEIRO: tp_classification.c
-
-DESCRICAO:
-Este ficheiro contem a implementacao das regras de classificacao dos objetos
-detetados, com base nas medidas obtidas anteriormente.
-
-OBJETIVO:
-Atribuir a cada laranja uma categoria ou classe, por exemplo calibre comercial,
-com base nos criterios definidos no enunciado e/ou no regulamento de referencia.
-===============================================================================
-*/
 
 #include "../include/tp_classification.h"
 
-/**
- * @brief Devolve o valor absoluto de um inteiro.
- */
 static int absInt(int value)
 {
   return value < 0 ? -value : value;
 }
 
-/**
- * @brief Calcula a intensidade em escala de cinzento a partir de RGB.
- */
 static int rgbIntensity(int r, int g, int b)
 {
   return (int)(0.299f * r + 0.587f * g + 0.114f * b);
 }
 
-/**
- * @brief Verifica se uma coordenada pertence ao blob da laranja.
- */
 static int pixelBelongsToOrange(IVC *labelsImage, OVC *orange, int x, int y)
 {
   int labelPos;
@@ -44,18 +22,12 @@ static int pixelBelongsToOrange(IVC *labelsImage, OVC *orange, int x, int y)
   return labelsImage->data[labelPos] == orange->label;
 }
 
-/**
- * @brief Le um pixel RGB e devolve a sua intensidade em cinzento.
- */
 static int grayPixel(IVC *rgbImage, int x, int y)
 {
   int rgbPos = y * rgbImage->bytesperline + x * rgbImage->channels;
   return rgbIntensity(rgbImage->data[rgbPos + 2], rgbImage->data[rgbPos + 1], rgbImage->data[rgbPos]);
 }
 
-/**
- * @brief Ordena um pequeno vetor de inteiros usado no calculo da mediana.
- */
 static void sortSmallArray(int *values, int count)
 {
   for (int i = 0; i < count - 1; i++)
@@ -72,9 +44,6 @@ static void sortSmallArray(int *values, int count)
   }
 }
 
-/**
- * @brief Calcula a mediana 3x3 da intensidade, considerando apenas pixeis da laranja.
- */
 static int medianGrayInOrange(IVC *rgbImage, IVC *labelsImage, OVC *orange, int x, int y)
 {
   int values[9];
@@ -100,9 +69,6 @@ static int medianGrayInOrange(IVC *rgbImage, IVC *labelsImage, OVC *orange, int 
   return values[count / 2];
 }
 
-/**
- * @brief Define o passo de amostragem para acelerar a avaliacao de qualidade.
- */
 static int qualitySampleStep(OVC *orange)
 {
   if (orange == 0) return 1;
@@ -111,9 +77,6 @@ static int qualitySampleStep(OVC *orange)
   return 2;
 }
 
-/**
- * @brief Calcula um percentil a partir de um histograma de intensidade.
- */
 static int percentileFromHistogram(int *histogram, int total, int percentile)
 {
   int target;
@@ -133,9 +96,6 @@ static int percentileFromHistogram(int *histogram, int total, int percentile)
   return 255;
 }
 
-/**
- * @brief Verifica se um pixel tem cor compativel com a cor tipica da laranja.
- */
 static int isTypicalOrangePixel(int r, int g, int b)
 {
   int max = r > g ? (r > b ? r : b) : (g > b ? g : b);
@@ -150,9 +110,6 @@ static int isTypicalOrangePixel(int r, int g, int b)
          saturation >= 35;
 }
 
-/**
- * @brief Verifica se um pixel parece defeito de cor face a media da laranja.
- */
 static int isDefectColorPixel(int r, int g, int b, int meanR, int meanG, int meanB)
 {
   int colorDistance = absInt(r - meanR) + absInt(g - meanG) + absInt(b - meanB);
@@ -164,10 +121,6 @@ static int isDefectColorPixel(int r, int g, int b, int meanR, int meanG, int mea
   return veryDark || greenish || bluish || pale || colorDistance > 135;
 }
 
-// Calibre segundo a escala de laranjas do Regulamento CEE-379-71.
-/**
- * @brief Devolve o calibre preferencial para um diametro em milimetros.
- */
 int orangeCaliber(int mmWidth)
 {
   if (mmWidth < 53) return -1;
@@ -187,9 +140,6 @@ int orangeCaliber(int mmWidth)
   return 13;
 }
 
-/**
- * @brief Verifica se um diametro pertence ao intervalo oficial de um calibre.
- */
 int orangeFitsCaliber(int diameterMM, int caliber)
 {
   static const int minDiameterByCaliber[14] = {100, 87, 84, 81, 77, 73, 70, 67, 64, 62, 60, 58, 56, 53};
@@ -200,12 +150,6 @@ int orangeFitsCaliber(int diameterMM, int caliber)
   return diameterMM >= minDiameterByCaliber[caliber] && diameterMM <= maxDiameterByCaliber[caliber];
 }
 
-/**
- * @brief Calcula a categoria de qualidade de uma laranja.
- *
- * A categoria e estimada por forma, preenchimento, cor tipica, defeitos de cor,
- * rugosidade, densidade de arestas e contraste de intensidade.
- */
 int orangeQualityCategory(IVC *rgbImage, IVC *labelsImage, OVC *orange, OrangeQualityMetrics *metrics)
 {
   int totalPixels = 0;
@@ -404,7 +348,6 @@ int orangeQualityCategory(IVC *rgbImage, IVC *labelsImage, OVC *orange, OrangeQu
            metrics->defectColorPercent <= 36 &&
            metrics->roughness <= 34)
   {
-    // Categoria III e suplementar no regulamento; o calice nao e fiavel neste video.
     metrics->category = ORANGE_CATEGORY_III;
   }
   else
@@ -415,9 +358,6 @@ int orangeQualityCategory(IVC *rgbImage, IVC *labelsImage, OVC *orange, OrangeQu
   return metrics->category;
 }
 
-/**
- * @brief Converte o codigo numerico da categoria para texto.
- */
 const char *orangeQualityCategoryName(int category)
 {
   switch (category)
@@ -430,9 +370,6 @@ const char *orangeQualityCategoryName(int category)
   }
 }
 
-/**
- * @brief Inicializa todos os campos das estatisticas de lote.
- */
 void orangeBatchInit(OrangeBatchStats *stats)
 {
   if (stats == 0) return;
@@ -452,9 +389,6 @@ void orangeBatchInit(OrangeBatchStats *stats)
   stats->qualityToleranceOutsidePercent = 0.0f;
 }
 
-/**
- * @brief Adiciona ao lote uma laranja contada com diametro e calibre.
- */
 int orangeBatchAdd(OrangeBatchStats *stats, int diameterMM, int caliber)
 {
   if (stats == 0) return 0;
@@ -481,9 +415,6 @@ int orangeBatchAdd(OrangeBatchStats *stats, int diameterMM, int caliber)
   return 1;
 }
 
-/**
- * @brief Define a categoria de qualidade da ultima laranja adicionada ao lote.
- */
 int orangeBatchAddQuality(OrangeBatchStats *stats, int qualityCategory)
 {
   if (stats == 0) return 0;
@@ -492,9 +423,6 @@ int orangeBatchAddQuality(OrangeBatchStats *stats, int qualityCategory)
   return orangeBatchSetQuality(stats, stats->count - 1, qualityCategory);
 }
 
-/**
- * @brief Atualiza a categoria de qualidade de uma laranja ja registada no lote.
- */
 int orangeBatchSetQuality(OrangeBatchStats *stats, int index, int qualityCategory)
 {
   if (stats == 0) return 0;
@@ -511,17 +439,11 @@ int orangeBatchSetQuality(OrangeBatchStats *stats, int index, int qualityCategor
   return 1;
 }
 
-/**
- * @brief Devolve o calibre escolhido para representar o lote.
- */
 int orangeBatchDominantCaliber(const OrangeBatchStats *stats)
 {
   return orangeBatchBestCaliber(stats);
 }
 
-/**
- * @brief Escolhe o calibre que melhor enquadra os diametros do lote.
- */
 int orangeBatchBestCaliber(const OrangeBatchStats *stats)
 {
   int bestCaliber = -1;
@@ -567,9 +489,6 @@ int orangeBatchBestCaliber(const OrangeBatchStats *stats)
   return bestCaliber;
 }
 
-/**
- * @brief Verifica se uma categoria candidata cumpre a tolerancia de qualidade.
- */
 int orangeBatchQualityToleranceOkForCategory(const OrangeBatchStats *stats, int lotCategory, int *outsideCount, float *outsidePercent)
 {
   int outside = 0;
@@ -639,9 +558,6 @@ int orangeBatchQualityToleranceOkForCategory(const OrangeBatchStats *stats, int 
   return (((float)outside * 100.0f) / (float)stats->count) <= maxTolerancePercent;
 }
 
-/**
- * @brief Escolhe a melhor categoria de qualidade que cumpre o regulamento.
- */
 int orangeBatchBestQualityCategory(OrangeBatchStats *stats)
 {
   int outsideCount = 0;
@@ -664,9 +580,6 @@ int orangeBatchBestQualityCategory(OrangeBatchStats *stats)
   return ORANGE_CATEGORY_REJECTED;
 }
 
-/**
- * @brief Calcula se a categoria de qualidade do lote respeita a tolerancia.
- */
 int orangeBatchQualityToleranceOk(OrangeBatchStats *stats)
 {
   int outsideCount = 0;
@@ -696,9 +609,6 @@ int orangeBatchQualityToleranceOk(OrangeBatchStats *stats)
   return 1;
 }
 
-/**
- * @brief Devolve a diferenca maxima de diametro permitida para o calibre.
- */
 int orangeBatchMaxAllowedDifference(int caliber)
 {
   if (caliber >= 0 && caliber <= 2) return 11;
@@ -708,9 +618,6 @@ int orangeBatchMaxAllowedDifference(int caliber)
   return 0;
 }
 
-/**
- * @brief Verifica a homogeneidade do lote pelo menor e maior diametro.
- */
 int orangeBatchIsHomogeneous(OrangeBatchStats *stats)
 {
   int diameterDifference;
@@ -728,9 +635,6 @@ int orangeBatchIsHomogeneous(OrangeBatchStats *stats)
   return diameterDifference <= stats->maxAllowedDifferenceMM;
 }
 
-/**
- * @brief Verifica a tolerancia de calibre atualmente adotada para o lote.
- */
 int orangeBatchToleranceOk(OrangeBatchStats *stats)
 {
   /*
@@ -779,9 +683,6 @@ int orangeBatchToleranceOk(OrangeBatchStats *stats)
   return orangeBatchMinimumToleranceOk(stats);
 }
 
-/**
- * @brief Aplica a tolerancia de calibre pelo minimo absoluto de 50 mm.
- */
 int orangeBatchMinimumToleranceOk(OrangeBatchStats *stats)
 {
   int outsideCount = 0;
@@ -809,9 +710,6 @@ int orangeBatchMinimumToleranceOk(OrangeBatchStats *stats)
   return !belowAbsoluteMinimum && stats->toleranceOutsidePercent <= 10.0f;
 }
 
-/**
- * @brief Recalcula calibre dominante, homogeneidade e tolerancias do lote.
- */
 void orangeBatchUpdate(OrangeBatchStats *stats)
 {
   if (stats == 0) return;

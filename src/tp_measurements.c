@@ -1,13 +1,3 @@
-/*
-===============================================================================
-FICHEIRO: tp_measurements.c
-
-DESCRICAO:
-Este ficheiro contem a implementacao das funcoes responsaveis pela extracao de
-medidas e caracteristicas dos objetos segmentados.
-===============================================================================
-*/
-
 #include <stdlib.h>
 #include "../include/tp_measurements.h"
 
@@ -15,13 +5,6 @@ medidas e caracteristicas dos objetos segmentados.
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-/**
- * @brief Etiqueta componentes conexas numa imagem binaria.
- *
- * A funcao percorre a mascara, atribui etiquetas aos pixeis brancos e resolve
- * equivalencias entre etiquetas vizinhas. No fim devolve um vetor de blobs com
- * as etiquetas encontradas.
- */
 OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 {
 	int channels = src->channels;
@@ -172,12 +155,7 @@ OVC *vc_binary_blob_labelling(IVC *src, IVC *dst, int *nlabels)
 	return blobs;
 }
 
-/**
- * @brief Calcula as principais medidas de cada blob etiquetado.
- *
- * A funcao usa uma passagem pela imagem de etiquetas para calcular area,
- * perimetro, centro de massa e bounding box de todos os blobs.
- */
+
 int vc_binary_blob_info(IVC *src, OVC *blobs, int nblobs)
 {
 	unsigned char *data = (unsigned char *)src->data;

@@ -1,21 +1,5 @@
-﻿/*
-===============================================================================
-FICHEIRO: tp_visualization.c
+﻿#include "../include/tp_visualization.h"
 
-DESCRICAO:
-Este ficheiro contem funcoes de desenho usadas na visualizacao dos resultados.
-
-OBJETIVO:
-Desenhar elementos como bounding boxes e centros de massa sobre a imagem.
-===============================================================================
-*/
-#include "../include/tp_visualization.h"
-
-/**
- * @brief Desenha caixas delimitadoras dos blobs diretamente sobre a imagem.
- *
- * A funcao usa centro, largura e altura do blob para desenhar os limites em RGB.
- */
 int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int padding, int thickness, int colorR, int colorG, int colorB){
 
 	if(!srcdst || !blobs) return 0;
@@ -84,11 +68,6 @@ int vc_draw_bounding_box_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int pad
     return 1;
 }
 
-/**
- * @brief Desenha uma marca no centro de massa de cada blob.
- *
- * A marca e desenhada manualmente nos pixeis da imagem, usando a cor recebida.
- */
 int vc_draw_center_mass_all_blobs(IVC* srcdst, OVC* blobs, int nlabels, int kernel, int thickness, int colorR, int colorG, int colorB)
 {
 	for (int i = 0; i < nlabels; i++)

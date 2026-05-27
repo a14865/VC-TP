@@ -1,24 +1,6 @@
-﻿/*
-===============================================================================
-FICHEIRO: tp_tracking.c
-
-DESCRICAO:
-Este ficheiro contem a logica de acompanhamento das laranjas entre frames.
-
-OBJETIVO:
-Associar deteccoes consecutivas e evitar que a mesma laranja seja contada mais
-do que uma vez.
-===============================================================================
-*/
-#include <math.h>
+﻿#include <math.h>
 #include "../include/tp_tracking.h"
 
-/**
- * @brief Associa uma laranja atual a uma laranja da frame anterior.
- *
- * A associacao e feita pela menor distancia entre centroides. Quando a laranja
- * cruza a linha de ativacao pela primeira vez, incrementa o contador total.
- */
 int trackOrange(OVC *orange, OVC *previousOranges, int previousCount, int activationLine, double maxDistance, int *totalOranges, int *orangeWasCounted)
 {
     int matchIndex = -1;
